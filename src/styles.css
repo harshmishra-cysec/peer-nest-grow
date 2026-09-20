@@ -1,0 +1,170 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * SkillNest design system.
+ *
+ * One calm teal accent for actions. Green is reserved for verified/success,
+ * amber for streaks/pending. Every other piece of information is plain text.
+ * All colors use oklch. Spacing follows an 8/16/24/32 scale via Tailwind's
+ * default 4px grid (p-2, p-4, p-6, p-8).
+ */
+
+@theme inline {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+
+  /* Semantic state colors — success = verified, warning = pending/streak */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+
+  /* Skill level pills — the only other place pills are used */
+  --color-skill-beginner: var(--skill-beginner);
+  --color-skill-beginner-soft: var(--skill-beginner-soft);
+  --color-skill-intermediate: var(--skill-intermediate);
+  --color-skill-intermediate-soft: var(--skill-intermediate-soft);
+  --color-skill-advanced: var(--skill-advanced);
+  --color-skill-advanced-soft: var(--skill-advanced-soft);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --shadow-card: 0 1px 2px oklch(0.2 0.02 240 / 0.04), 0 4px 16px -4px oklch(0.2 0.02 240 / 0.06);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Warm paper background, soft ink foreground — calm, not clinical */
+  --background: oklch(0.985 0.004 85);
+  --foreground: oklch(0.24 0.02 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.02 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0.02 250);
+
+  /* Primary: calm teal */
+  --primary: oklch(0.55 0.09 200);
+  --primary-foreground: oklch(0.99 0 0);
+  --primary-soft: oklch(0.95 0.025 200);
+
+  --secondary: oklch(0.955 0.006 85);
+  --secondary-foreground: oklch(0.3 0.02 250);
+  --muted: oklch(0.955 0.006 85);
+  --muted-foreground: oklch(0.52 0.02 250);
+  --accent: oklch(0.94 0.01 200);
+  --accent-foreground: oklch(0.24 0.02 250);
+  --destructive: oklch(0.577 0.2 27);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.91 0.008 85);
+  --input: oklch(0.89 0.008 85);
+  --ring: oklch(0.55 0.09 200);
+
+  --success: oklch(0.6 0.13 155);
+  --success-foreground: oklch(0.99 0 0);
+  --success-soft: oklch(0.95 0.04 155);
+  --warning: oklch(0.72 0.15 70);
+  --warning-foreground: oklch(0.3 0.05 70);
+  --warning-soft: oklch(0.96 0.05 80);
+
+  --skill-beginner: oklch(0.5 0.08 230);
+  --skill-beginner-soft: oklch(0.95 0.02 230);
+  --skill-intermediate: oklch(0.5 0.08 290);
+  --skill-intermediate-soft: oklch(0.95 0.02 290);
+  --skill-advanced: oklch(0.45 0.09 200);
+  --skill-advanced-soft: oklch(0.93 0.03 200);
+
+  --chart-1: oklch(0.55 0.09 200);
+  --chart-2: oklch(0.6 0.13 155);
+  --chart-3: oklch(0.72 0.15 70);
+  --chart-4: oklch(0.5 0.08 290);
+  --chart-5: oklch(0.5 0.08 230);
+  --sidebar: oklch(0.985 0.004 85);
+  --sidebar-foreground: oklch(0.24 0.02 250);
+  --sidebar-primary: oklch(0.55 0.09 200);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.955 0.006 85);
+  --sidebar-accent-foreground: oklch(0.24 0.02 250);
+  --sidebar-border: oklch(0.91 0.008 85);
+  --sidebar-ring: oklch(0.55 0.09 200);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Surface used by every card-like block in the app */
+@utility surface {
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}

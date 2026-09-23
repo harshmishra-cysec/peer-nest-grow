@@ -4,6 +4,10 @@ export function formatDate(iso: string): string {
   return format(new Date(iso), "d MMM yyyy");
 }
 
+export function formatLongDate(iso: string): string {
+  return format(new Date(iso), "d MMMM yyyy");
+}
+
 export function formatTime(iso: string): string {
   return format(new Date(iso), "h:mm a");
 }

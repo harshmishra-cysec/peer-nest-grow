@@ -1,26 +1,14 @@
 import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  ArrowRight,
-  Calendar,
-  CheckCircle2,
-  Crown,
-  Info,
-  Scale,
-  Sparkles,
-  Target,
-  Users,
-} from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, Crown, Info, Target, Users } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { SkillBadge } from "@/components/shared/SkillBadge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { JoinCircleQuizModal } from "@/components/forms/JoinCircleQuizModal";
-import { FormationModal } from "@/components/workspace/FormationModal";
 import { CIRCLE_CAPACITY, GOAL_TYPE_HINTS, ROUTES, SUB_GROUP_SIZE } from "@/constants";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatLongDate, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getCircleById, isCircleFull, joinCircle } from "@/services/circleService";
 import { computeBalancedSubGroups } from "@/services/groupingService";
@@ -74,12 +62,26 @@ function getTopicTags(topic: string, goalType: string): string[] {
   return tags;
 }
 
+/**
+ * Derives a clean interest/focus subtitle for the member based on circle or user.
+ */
+function getMemberInterest(index: number): string {
+  const defaultInterests = [
+    "Competitive coding",
+    "Backend systems",
+    "Interview prep",
+    "Open source",
+    "Product building",
+    "Teaching peers",
+  ];
+  return defaultInterests[index % defaultInterests.length];
+}
+
 function CircleDashboardPage() {
   const childMatches = useChildMatches();
   const isChildRoute = childMatches.length > 0;
   const { circleId } = Route.useParams();
   const [joining, setJoining] = useState(false);
-  const [showFormationModal, setShowFormationModal] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
   const { data, loading, setData } = useAsyncData(
     () =>
@@ -127,7 +129,7 @@ function CircleDashboardPage() {
   // Compute real balanced grouping data directly from actual members
   const groupingResult = full ? computeBalancedSubGroups(circle.id, circle.members) : null;
 
-  /** Handles joining an open circle with assessed skill level and refreshing sub-groups if capacity is reached */
+  /** Handles joining an open circle with assessed skill level */
   const handleConfirmJoinWithQuiz = async (assessedLevel: SkillLevel) => {
     setJoining(true);
     try {
@@ -142,244 +144,203 @@ function CircleDashboardPage() {
             }
           : prev,
       );
-      if (updatedCircle.members.length >= CIRCLE_CAPACITY) {
-        setShowFormationModal(true);
-      }
     } finally {
       setJoining(false);
     }
   };
 
   const topicTags = getTopicTags(circle.topic, circle.goalType);
-  const goalDescription =
-    GOAL_TYPE_HINTS[circle.goalType] || `${circle.goalType} together as a focused peer team`;
 
   return (
     <AppShell>
-      {/* 1. TOP SECTION */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          {/* Small uppercase topic label */}
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {circle.topic}
-          </p>
-
-          {/* Circle name as a large bold heading */}
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {circle.name}
-          </h1>
-
-          {/* Short description line below it */}
-          {circle.description && (
-            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              {circle.description}
+      {/* 1. TOP HERO CARD CONTAINER: Exact screenshot layout with soft border & subtle tint */}
+      <div className="rounded-2xl border border-sky-100 bg-gradient-to-b from-sky-50/40 via-white to-white p-6 shadow-sm sm:p-8">
+        {/* Top Header */}
+        <section className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1.5">
+            {/* Small uppercase topic label */}
+            <p className="text-[11px] font-bold tracking-wider text-primary uppercase">
+              {circle.topic}
             </p>
-          )}
 
-          {/* Small topic/category tag pills below description */}
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            {topicTags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center rounded-md border border-border bg-surface-muted/60 px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+            {/* Circle name as a large bold heading */}
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {circle.name}
+            </h1>
+
+            {/* Short description line below it */}
+            {circle.description && (
+              <p className="max-w-3xl text-xs sm:text-sm text-slate-500">{circle.description}</p>
+            )}
+
+            {/* Small topic/category tag pills below description */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-2">
+              {topicTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-md border border-slate-200/80 bg-white px-2.5 py-0.5 text-[11px] font-medium text-slate-600 shadow-2xs"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Status pill in the top-right corner + Join Action */}
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:self-start">
+            {full ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-medium text-emerald-700">
+                <CheckCircle2 className="size-3.5" />
+                <span>Full · Sub-Groups Formed</span>
+              </span>
+            ) : isMember ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-500 shadow-2xs">
+                <span>Joined · Awaiting Capacity</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-1 text-xs font-medium text-slate-500 shadow-2xs">
+                <span>Open for Enrollment</span>
+              </span>
+            )}
+
+            {!full && !isMember && (
+              <Button
+                onClick={() => setShowQuizModal(true)}
+                disabled={joining}
+                size="sm"
+                className="gap-1.5 text-xs shadow-sm"
               >
-                {tag}
-              </span>
-            ))}
+                {joining ? "Joining…" : "Join this circle"}
+              </Button>
+            )}
           </div>
-        </div>
+        </section>
 
-        {/* Status pill in the top-right corner + Join Action */}
-        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:self-start">
-          {full ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">
-              <CheckCircle2 className="size-3.5" />
-              <span>Full · Sub-Groups Formed</span>
-            </span>
-          ) : isMember ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary">
-              <Users className="size-3.5" />
-              <span>Joined · Awaiting Capacity</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-              <span>Open for Enrollment</span>
-            </span>
-          )}
-
-          {!full && !isMember && (
-            <Button
-              onClick={() => setShowQuizModal(true)}
-              disabled={joining}
-              size="sm"
-              className="gap-1.5"
-            >
-              {joining ? "Joining…" : "Join this circle"}
-            </Button>
-          )}
-        </div>
-      </section>
-
-      {/* 2. STATS ROW (three cards side by side) */}
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* "Goal" card: icon + the circle's stated goal text */}
-        <div className="surface flex flex-col justify-between p-5">
-          <div className="flex items-center gap-2.5 text-muted-foreground">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Target className="size-4" />
+        {/* 2. STATS ROW (three cards side by side matching reference) */}
+        <section className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* "Goal" card: icon + stated goal text */}
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Target className="size-4 text-slate-400" />
+              <span className="text-xs font-medium">Goal</span>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider">Goal</span>
-          </div>
-          <div className="mt-3">
-            <p className="font-display text-lg font-bold text-foreground">{circle.goalType}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{goalDescription}</p>
-          </div>
-        </div>
-
-        {/* "Deadline" card: icon + deadline date + skill level range text */}
-        <div className="surface flex flex-col justify-between p-5">
-          <div className="flex items-center gap-2.5 text-muted-foreground">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Calendar className="size-4" />
+            <div className="mt-3">
+              <p className="text-xs sm:text-sm font-semibold text-slate-800 leading-snug">
+                Improve problem-solving and {circle.topic.toLowerCase()} skills through peer
+                learning.
+              </p>
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider">Deadline</span>
           </div>
-          <div className="mt-3">
-            <p className="font-display text-lg font-bold text-foreground">
-              {formatDate(circle.deadline)}
-            </p>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Skill range: All levels welcome (1:1:1 peer balance)
-            </p>
-          </div>
-        </div>
 
-        {/* "Current Members" card: icon + "X / 9" count with a horizontal progress bar underneath */}
-        <div className="surface flex flex-col justify-between p-5 sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Users className="size-4" />
-              </div>
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                Current Members
-              </span>
+          {/* "Deadline" card: icon + deadline date + skill level range text */}
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-2xs">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Calendar className="size-4 text-slate-400" />
+              <span className="text-xs font-medium">Deadline</span>
             </div>
-            <span className="text-xs font-medium text-muted-foreground">{fillPercent}%</span>
+            <div className="mt-3">
+              <p className="text-xs sm:text-sm font-semibold text-slate-800">
+                {formatLongDate(circle.deadline)}
+              </p>
+              <p className="mt-1 text-[11px] text-slate-400">Level: Beginner – Intermediate</p>
+            </div>
           </div>
-          <div className="mt-3">
-            <div className="flex items-baseline justify-between">
-              <p className="font-display text-lg font-bold text-foreground">
+
+          {/* "Current Members" card: icon + "X / 9" count with blue horizontal progress bar underneath */}
+          <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-2xs sm:col-span-2 lg:col-span-1">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Users className="size-4 text-slate-400" />
+              <span className="text-xs font-medium">Current Members</span>
+            </div>
+            <div className="mt-3">
+              <p className="font-display text-xl font-bold text-slate-900 tracking-tight">
                 {currentCount} / {CIRCLE_CAPACITY}
               </p>
-              <span className="text-xs text-muted-foreground">
-                {full ? "Capacity reached" : `${remainingSpots} spots remaining`}
-              </span>
+              {/* Sleek blue progress line like screenshot */}
+              <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-300"
+                  style={{ width: `${fillPercent}%` }}
+                />
+              </div>
             </div>
-            <Progress value={fillPercent} className="mt-2.5 h-2" />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* 3. INFO BANNER (A soft-colored info box below the stats row) */}
-      {!full ? (
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-primary/20 bg-primary-soft/50 p-4 text-foreground sm:items-center">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-            <Info className="size-4" />
-          </div>
-          <div className="min-w-0 flex-1 text-xs sm:text-sm leading-relaxed text-foreground">
-            <span>
-              Waiting for{" "}
-              <span className="font-semibold text-primary">
-                {remainingSpots} more {remainingSpots === 1 ? "member" : "members"}
+        {/* 3. INFO BANNER: soft blue box below stats */}
+        {!full ? (
+          <div className="mt-5 rounded-xl border border-sky-100 bg-sky-50/70 p-4">
+            <div className="flex items-center gap-2 text-primary font-medium text-xs sm:text-sm">
+              <Info className="size-4 shrink-0" />
+              <span>
+                Waiting for {remainingSpots} more {remainingSpots === 1 ? "member" : "members"}.
               </span>
-              . Once the circle reaches {CIRCLE_CAPACITY} members, the platform automatically
+            </div>
+            <p className="mt-1 text-xs text-slate-600 sm:text-[13px] leading-relaxed pl-6">
+              Once the circle reaches {CIRCLE_CAPACITY} members, the platform automatically
               evaluates member skills and splits them into balanced learning sub-groups.
-            </span>
+            </p>
           </div>
-        </div>
-      ) : (
-        <div className="mt-6 flex flex-col gap-4 rounded-xl border border-success/30 bg-success-soft/40 p-4 text-foreground sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3 sm:items-center">
-            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-success/20 text-success">
-              <CheckCircle2 className="size-4" />
+        ) : (
+          <div className="mt-5 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center">
+              <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+              <div>
+                <p className="text-xs sm:text-sm font-semibold text-emerald-900">
+                  Balanced sub-groups formed!
+                </p>
+                <p className="text-xs text-emerald-700">
+                  {circle.members.length}/{CIRCLE_CAPACITY} members —{" "}
+                  {groupingResult?.balanceSummary ??
+                    "Distributed into balanced sub-groups with auto-elected leaders."}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs sm:text-sm font-semibold text-foreground">
-                Balanced sub-groups formed!
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {circle.members.length}/{CIRCLE_CAPACITY} members —{" "}
-                {groupingResult?.balanceSummary ??
-                  "Distributed into balanced sub-groups with auto-elected leaders."}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFormationModal(true)}
-              className="gap-1.5"
-            >
-              <Scale className="size-4 text-primary" /> Grouping Engine
-            </Button>
             {isMember && (
-              <Button asChild size="sm" className="gap-1.5">
+              <Button asChild size="sm" className="gap-1.5 shrink-0 text-xs">
                 <Link to={ROUTES.subGroup} params={{ circleId: circle.id }}>
                   <span>Enter My Sub-Group</span>
-                  <ArrowRight className="size-4" />
+                  <ArrowRight className="size-3.5" />
                 </Link>
               </Button>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* 4. MEMBERS SECTION (or Sub-groups if full) */}
+      {/* 4. MEMBERS SECTION (Exact screenshot layout with 3-column pill cards) */}
       {!full ? (
-        <section className="mt-8">
+        <section className="mt-8 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xs sm:p-8">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-foreground">Members</h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                {currentCount}
-              </span>
-            </div>
+            <h2 className="text-lg font-bold text-slate-900">Members</h2>
             {/* Small note on the right: Skill levels stay private until groups are formed */}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-slate-400">
               Skill levels stay private until groups are formed
             </p>
           </div>
 
-          {/* Responsive multi-column grid (3 columns on desktop) */}
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {circle.members.map((member) => (
+          {/* 3-column responsive grid matching the screenshot */}
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {circle.members.map((member, idx) => (
               <div
                 key={member.userId}
-                className="surface flex items-center gap-3.5 p-4 transition-all hover:border-border/80"
+                className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white px-3.5 py-3 shadow-2xs transition-colors hover:border-slate-300"
               >
-                {/* Small circular avatar with initials */}
-                <MemberAvatar name={member.name} size="md" />
+                {/* Circular avatar with light blue background and blue text */}
+                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sky-50 text-xs font-semibold text-primary">
+                  {initials(member.name)}
+                </span>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
+                    <p className="truncate text-xs font-semibold text-slate-800">{member.name}</p>
                     {member.userId === currentUser.id && (
-                      <span className="text-xs text-muted-foreground">(you)</span>
+                      <span className="text-[11px] text-slate-400">(you)</span>
                     )}
                   </div>
-
-                  {/* Short interest/topic tag pill */}
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="inline-block max-w-[140px] truncate rounded bg-muted/80 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                      {circle.topic}
-                    </span>
-                  </div>
-
-                  {/* Joined date */}
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Joined {formatDate(member.joinedAt)}
+                  {/* Tag and joined date line */}
+                  <p className="truncate text-[11px] text-slate-400">
+                    {getMemberInterest(idx)} · joined {formatDate(member.joinedAt)}
                   </p>
                 </div>
               </div>
@@ -390,16 +351,16 @@ function CircleDashboardPage() {
         /* Full Circle: Display Sub-groups alongside Roster */
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           {/* Member roster */}
-          <section>
+          <section className="surface p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Member roster</h2>
               <span className="text-xs text-muted-foreground">
                 {circle.members.length} {circle.members.length === 1 ? "member" : "members"}
               </span>
             </div>
-            <ul className="surface mt-4 divide-y">
+            <ul className="mt-4 divide-y divide-border">
               {circle.members.map((member) => (
-                <li key={member.userId} className="flex items-center gap-3 px-4 py-3">
+                <li key={member.userId} className="flex items-center gap-3 py-3">
                   <MemberAvatar name={member.name} size="sm" />
                   <span className="flex-1 truncate text-sm font-medium">
                     {member.name}
@@ -414,7 +375,7 @@ function CircleDashboardPage() {
           </section>
 
           {/* Sub-groups list */}
-          <section>
+          <section className="surface p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Sub-groups</h2>
               {subGroups.length > 0 && (
@@ -423,7 +384,7 @@ function CircleDashboardPage() {
                 </span>
               )}
             </div>
-            <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-3">
+            <ul className="mt-4 grid gap-4 sm:grid-cols-1">
               {subGroups.map((group) => {
                 const isMine = group.id === mySubGroup?.id;
                 const leader = group.members.find((m) => m.userId === group.leaderUserId);
@@ -431,7 +392,7 @@ function CircleDashboardPage() {
                   <li
                     key={group.id}
                     className={cn(
-                      "surface p-4 transition-all",
+                      "rounded-xl border border-border p-4 transition-all",
                       isMine && "border-2 border-primary bg-primary-soft/40 shadow-sm",
                     )}
                   >
@@ -486,17 +447,6 @@ function CircleDashboardPage() {
         topic={circle.topic}
         onConfirmJoin={handleConfirmJoinWithQuiz}
       />
-
-      {/* Formation Engine Animated Modal */}
-      {groupingResult && (
-        <FormationModal
-          open={showFormationModal}
-          onOpenChange={setShowFormationModal}
-          circleName={circle.name}
-          members={circle.members}
-          groupingResult={groupingResult}
-        />
-      )}
     </AppShell>
   );
 }

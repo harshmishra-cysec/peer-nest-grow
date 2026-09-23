@@ -314,11 +314,17 @@ function SubGroupWorkspacePage() {
       {/* Tab contents */}
       <div className="mt-6">
         {activeTab === "tasks" && (
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-            <div className="space-y-8">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+            {/* Primary Full Width Task Section */}
+            <div className="space-y-6">
               <section>
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Tasks & milestones</h2>
+                  <div>
+                    <h2 className="text-lg font-semibold text-foreground">Tasks & milestones</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Track deliverables, attach proof, and verify peer submissions.
+                    </p>
+                  </div>
                   {/* Any member can add tasks — creation is intentionally not leader-only. */}
                   <AddTaskDialog
                     members={subGroup.members}
@@ -335,10 +341,13 @@ function SubGroupWorkspacePage() {
                   onCommentOnly={handleCommentOnly}
                 />
               </section>
+            </div>
 
+            {/* Sidebar with Sub-group members and quick helper card */}
+            <div className="space-y-6">
               <section>
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Sub-group members</h2>
+                  <h2 className="text-lg font-semibold text-foreground">Sub-group members</h2>
                   <span className="text-xs text-muted-foreground">3 learners · 1 leader</span>
                 </div>
                 <ul className="surface divide-y">
@@ -365,24 +374,21 @@ function SubGroupWorkspacePage() {
                   })}
                 </ul>
               </section>
-            </div>
 
-            {/* Quick chat sidebar inside tasks tab */}
-            <div>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Live discussion</h2>
+              {/* Quick tip card */}
+              <div className="surface p-5 space-y-2.5 bg-slate-50/50">
+                <h3 className="font-semibold text-sm text-foreground">Peer Verification</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  When a team member marks a task complete with proof (GitHub link, Loom video, or
+                  files), other members review and verify it to unlock streak rewards.
+                </p>
               </div>
-              <ChatPanel
-                messages={messages}
-                currentUserId={currentUser.id}
-                onSend={handleSendMessage}
-              />
             </div>
           </div>
         )}
 
         {activeTab === "milestones" && (
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
               <MilestonesList
                 milestones={milestones}
@@ -422,7 +428,7 @@ function SubGroupWorkspacePage() {
         )}
 
         {activeTab === "resources" && (
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
               <ResourcesList
                 resources={resources}
@@ -446,7 +452,7 @@ function SubGroupWorkspacePage() {
         )}
 
         {activeTab === "chat" && (
-          <div className="max-w-3xl">
+          <div className="max-w-4xl">
             <ChatPanel
               messages={messages}
               currentUserId={currentUser.id}

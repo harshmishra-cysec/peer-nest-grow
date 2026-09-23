@@ -1,12 +1,12 @@
 import { simulateRequest } from "./apiClient";
+import { computeBalancedSubGroups, type GroupingResult } from "./groupingService";
 import { CIRCLES, CURRENT_USER, SUB_GROUPS, TASKS } from "./mockData";
-import { CIRCLE_CAPACITY, SUB_GROUP_SIZE } from "@/constants";
-import type { CircleMember, SubGroup, Task } from "@/types";
+import { CIRCLE_CAPACITY } from "@/constants";
+import type { SubGroup, Task } from "@/types";
 
 /**
- * Ensures balanced sub-groups exist for a full circle.
- * Automatically distributes members into balanced groups of 3:
- * 1 Advanced (auto-assigned as leader), 1 Intermediate, 1 Beginner.
+ * Ensures balanced sub-groups exist for a full circle by evaluating actual member
+ * assessed skill levels and computing 1:1:1 balanced distribution or fallback.
  */
 function ensureSubGroupsForCircle(circleId: string): SubGroup[] {
   const existing = SUB_GROUPS.filter((group) => group.circleId === circleId);
@@ -17,52 +17,19 @@ function ensureSubGroupsForCircle(circleId: string): SubGroup[] {
     return [];
   }
 
-  const beginners = circle.members.filter((m) => m.skillLevel === "Beginner");
-  const intermediates = circle.members.filter((m) => m.skillLevel === "Intermediate");
-  const advanced = circle.members.filter((m) => m.skillLevel === "Advanced");
+  const result = computeBalancedSubGroups(circle.id, circle.members);
+  SUB_GROUPS.push(...result.subGroups);
+  return result.subGroups;
+}
 
-  const names = ["Sub-Group Alpha", "Sub-Group Beta", "Sub-Group Gamma"];
-  const newGroups: SubGroup[] = [];
-
-  for (let i = 0; i < SUB_GROUP_SIZE; i++) {
-    const groupMembers: CircleMember[] = [];
-    const adv = advanced[i];
-    const inter = intermediates[i];
-    const beg = beginners[i];
-
-    if (adv) groupMembers.push(adv);
-    if (inter) groupMembers.push(inter);
-    if (beg) groupMembers.push(beg);
-
-    // Fallback if uneven distribution across skill levels in custom circles
-    if (groupMembers.length < SUB_GROUP_SIZE) {
-      const assignedIds = new Set(
-        newGroups
-          .flatMap((g) => g.members.map((m) => m.userId))
-          .concat(groupMembers.map((m) => m.userId)),
-      );
-      for (const m of circle.members) {
-        if (!assignedIds.has(m.userId) && groupMembers.length < SUB_GROUP_SIZE) {
-          groupMembers.push(m);
-          assignedIds.add(m.userId);
-        }
-      }
-    }
-
-    // Advanced-skill member is automatically designated as leader
-    const leader = groupMembers.find((m) => m.skillLevel === "Advanced") ?? groupMembers[0];
-
-    newGroups.push({
-      id: `sg-${circle.id}-${i + 1}`,
-      circleId: circle.id,
-      name: names[i] ?? `Sub-Group ${i + 1}`,
-      leaderUserId: leader ? leader.userId : "",
-      members: groupMembers,
-    });
+/** Returns the real computed grouping result with tier statistics and balance verification */
+export function getGroupingAnalysisForCircle(circleId: string): Promise<GroupingResult | null> {
+  const circle = CIRCLES.find((c) => c.id === circleId);
+  if (!circle || circle.members.length < CIRCLE_CAPACITY) {
+    return simulateRequest(null);
   }
-
-  SUB_GROUPS.push(...newGroups);
-  return newGroups;
+  const result = computeBalancedSubGroups(circle.id, circle.members);
+  return simulateRequest(result);
 }
 
 export function getSubGroupsForCircle(circleId: string): Promise<SubGroup[]> {

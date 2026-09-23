@@ -31,6 +31,12 @@ export const COMMITMENT_HINTS: Record<CommitmentLevel, string> = {
   Serious: "Daily check-ins and deadlines",
 };
 
+/** Score thresholds for the multi-question skill assessment quiz */
+export const QUIZ_SCORE_THRESHOLDS = {
+  ADVANCED_MIN: 12,
+  INTERMEDIATE_MIN: 6,
+} as const;
+
 /** Simulated network delay for mock services (ms). Remove when real API lands. */
 export const MOCK_LATENCY_MS = 250;
 
@@ -46,3 +52,7 @@ export const ROUTES = {
   subGroup: "/circles/$circleId/subgroup",
   profile: "/profile",
 } as const;
+
+/** Sub-group workspace resource limits and milestone constants */
+export const MAX_RESOURCES_SHOWN = 50;
+export const MAX_MILESTONES_SHOWN = 20;

@@ -123,3 +123,23 @@ export interface CirclePreferences {
 export interface JoinPreferences extends CirclePreferences {
   skillLevel: SkillLevel;
 }
+
+export type MilestoneStatus = "Not Started" | "In Progress" | "Completed";
+
+export interface Milestone {
+  id: string;
+  subGroupId: string;
+  title: string;
+  dueDate: string; // ISO date string
+  status: MilestoneStatus;
+  description?: string;
+}
+
+export interface Resource {
+  id: string;
+  subGroupId: string;
+  title: string;
+  url: string;
+  addedBy: string; // member name
+  addedDate: string; // ISO date string
+}

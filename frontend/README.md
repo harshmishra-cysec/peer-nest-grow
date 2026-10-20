@@ -1,11 +1,5 @@
 # SkillNest
 
-> Smart Collaborative Learning Circles with Balanced Peer Groups
-
-SkillNest is a peer-learning platform built with React, TypeScript, TanStack Start, and Tailwind CSS. It enables learners to join or create topic-based Learning Circles (e.g. Data Structures & Algorithms, UI/UX Design, Full-Stack Web Development) with defined goals, commitment levels, and timelines. When a circle reaches 9 members, the system balances them into 3-person sub-groups featuring a mix of Beginner, Intermediate, and Advanced learners with collaborative workspaces, task confirmation, shared checklists, and real-time group chat.
-
----
-
 ## Tech Stack
 
 - **Framework & Routing**: React 19, [TanStack Start](https://tanstack.com/start) with file-based routing and Server-Side Rendering (SSR)
@@ -59,30 +53,6 @@ SkillNest is a peer-learning platform built with React, TypeScript, TanStack Sta
 
 - Node.js (v20 or higher recommended)
 - npm or pnpm
-
-### Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone <repository-url>
-   cd skillnest
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-### Development
-
-Run the local development server:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
 ### Building for Production
 

@@ -6,11 +6,11 @@ import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { SkillBadge } from "@/components/shared/SkillBadge";
 import { Button } from "@/components/ui/button";
 import { JoinCircleQuizModal } from "@/components/forms/JoinCircleQuizModal";
-import { CIRCLE_CAPACITY, GOAL_TYPE_HINTS, ROUTES, SUB_GROUP_SIZE } from "@/constants";
+import { GOAL_TYPE_HINTS, ROUTES, SUB_GROUP_SIZE } from "@/constants";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { formatDate, formatLongDate, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { getCircleById, isCircleFull, joinCircle } from "@/services/circleService";
+import { getCircleById, getCircleCapacity, isCircleFull, joinCircle } from "@/services/circleService";
 import { computeBalancedSubGroups } from "@/services/groupingService";
 import { getSubGroupsForCircle } from "@/services/subGroupService";
 import { getCurrentUser } from "@/services/userService";
@@ -123,8 +123,9 @@ function CircleDashboardPage() {
     group.members.some((m) => m.userId === currentUser.id),
   );
   const currentCount = circle.members.length;
-  const remainingSpots = Math.max(0, CIRCLE_CAPACITY - currentCount);
-  const fillPercent = Math.min(100, Math.round((currentCount / CIRCLE_CAPACITY) * 100));
+  const capacity = getCircleCapacity(circle);
+  const remainingSpots = Math.max(0, capacity - currentCount);
+  const fillPercent = Math.min(100, Math.round((currentCount / capacity) * 100));
 
   // Compute real balanced grouping data directly from actual members
   const groupingResult = full ? computeBalancedSubGroups(circle.id, circle.members) : null;
@@ -170,7 +171,7 @@ function CircleDashboardPage() {
 
             {/* Short description line below it */}
             {circle.description && (
-              <p className="max-w-3xl text-xs sm:text-sm text-slate-500">{circle.description}</p>
+              <p className="max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-base">{circle.description}</p>
             )}
 
             {/* Small topic/category tag pills below description */}
@@ -254,7 +255,7 @@ function CircleDashboardPage() {
             </div>
             <div className="mt-3">
               <p className="font-display text-xl font-bold text-slate-900 tracking-tight">
-                {currentCount} / {CIRCLE_CAPACITY}
+                {currentCount} / {capacity}
               </p>
               {/* Sleek blue progress line like screenshot */}
               <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
@@ -277,7 +278,7 @@ function CircleDashboardPage() {
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-600 sm:text-[13px] leading-relaxed pl-6">
-              Once the circle reaches {CIRCLE_CAPACITY} members, the platform automatically
+              Once the circle reaches {capacity} members, the platform automatically
               evaluates member skills and splits them into balanced learning sub-groups.
             </p>
           </div>
@@ -290,7 +291,7 @@ function CircleDashboardPage() {
                   Balanced sub-groups formed!
                 </p>
                 <p className="text-xs text-emerald-700">
-                  {circle.members.length}/{CIRCLE_CAPACITY} members —{" "}
+                  {circle.members.length}/{capacity} members —{" "}
                   {groupingResult?.balanceSummary ??
                     "Distributed into balanced sub-groups with auto-elected leaders."}
                 </p>

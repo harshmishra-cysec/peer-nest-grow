@@ -32,12 +32,27 @@ export function getRecommendedCircles(preferences: JoinPreferences): Promise<Cir
   return simulateRequest(ranked);
 }
 
-export function createCircle(preferences: CirclePreferences): Promise<Circle> {
+/** Allowed circle sizes chosen at creation: 9 to 30, in steps of 3 (sub-groups of 3). */
+export const CIRCLE_SIZE_OPTIONS = Array.from({ length: 8 }, (_, i) => 9 + i * 3);
+
+/** Max members for a circle (creator's choice, or the default). */
+export function getCircleCapacity(circle: Circle): number {
+  return circle.capacity ?? CIRCLE_CAPACITY;
+}
+
+export interface NewCircleInput extends CirclePreferences {
+  description: string;
+  capacity: number;
+}
+
+export function createCircle(input: NewCircleInput): Promise<Circle> {
+  const { description, capacity, ...preferences } = input;
   const created: Circle = {
     id: `c-${Date.now()}`,
     name: `${preferences.topic} Circle`,
     ...preferences,
-    description: "",
+    description: description.trim(),
+    capacity,
     // The creator is simply the first member — never a leader.
     members: [
       {
@@ -49,16 +64,18 @@ export function createCircle(preferences: CirclePreferences): Promise<Circle> {
     ],
     status: "Open",
   };
+  // Keep it in the in-memory store so it shows up in Explore Circles and its own page.
+  CIRCLES.unshift(created);
   return simulateRequest(created);
 }
 
 export function isCircleFull(circle: Circle): boolean {
-  return circle.members.length >= CIRCLE_CAPACITY;
+  return circle.members.length >= getCircleCapacity(circle);
 }
 
 /**
  * Joins the current user to an open circle if capacity allows.
- * If capacity reaches CIRCLE_CAPACITY, the circle becomes Grouped.
+ * If the circle's capacity is reached, the circle becomes Grouped.
  */
 export function joinCircle(
   circleId: string,
@@ -69,7 +86,7 @@ export function joinCircle(
     throw new Error(`Circle ${circleId} not found`);
   }
   if (!circle.members.some((m) => m.userId === CURRENT_USER.id)) {
-    if (circle.members.length >= CIRCLE_CAPACITY) {
+    if (circle.members.length >= getCircleCapacity(circle)) {
       throw new Error("Circle is already full");
     }
     circle.members.push({
@@ -78,7 +95,7 @@ export function joinCircle(
       skillLevel,
       joinedAt: new Date().toISOString(),
     });
-    if (circle.members.length >= CIRCLE_CAPACITY) {
+    if (circle.members.length >= getCircleCapacity(circle)) {
       circle.status = "Grouped";
     }
   }

@@ -1,6 +1,6 @@
 import { CalendarDays, Flag, Gauge, Users } from "lucide-react";
 import type { Circle } from "@/types";
-import { CIRCLE_CAPACITY } from "@/constants";
+import { getCircleCapacity } from "@/services/circleService";
 import { formatDate } from "@/lib/format";
 
 /**
@@ -12,7 +12,7 @@ export function CircleMeta({ circle, className }: { circle: Circle; className?: 
     { Icon: Flag, label: circle.goalType },
     { Icon: Gauge, label: circle.commitment },
     { Icon: CalendarDays, label: formatDate(circle.deadline) },
-    { Icon: Users, label: `${circle.members.length}/${CIRCLE_CAPACITY}` },
+    { Icon: Users, label: `${circle.members.length}/${getCircleCapacity(circle)}` },
   ];
   return (
     <dl className={className ?? "flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground"}>

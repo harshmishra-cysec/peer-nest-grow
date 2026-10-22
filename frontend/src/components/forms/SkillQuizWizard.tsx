@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Award, CheckCircle2, HelpCircle } from "lucide-react";
 import { SkillBadge } from "@/components/shared/SkillBadge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
-  ASSESSMENT_QUESTIONS,
+  getQuestionsForTopic,
   calculateAssessmentResult,
   type AssessmentResult,
 } from "@/services/assessmentService";
@@ -27,8 +27,9 @@ export function SkillQuizWizard({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [completedResult, setCompletedResult] = useState<AssessmentResult | null>(null);
 
-  const totalQuestions = ASSESSMENT_QUESTIONS.length;
-  const currentQuestion = ASSESSMENT_QUESTIONS[currentQuestionIndex];
+  const questions = useMemo(() => getQuestionsForTopic(topic), [topic]);
+  const totalQuestions = questions.length;
+  const currentQuestion = questions[currentQuestionIndex]!;
   const selectedOptionScore = answers[currentQuestion.id];
 
   const handleSelectOption = (score: number) => {

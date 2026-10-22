@@ -42,6 +42,8 @@ export interface Circle {
   commitment: CommitmentLevel;
   deadline: string; // ISO date
   description: string;
+  /** Max members chosen by the creator (9-30). Falls back to CIRCLE_CAPACITY. */
+  capacity?: number;
   members: CircleMember[];
   status: CircleStatus;
 }

@@ -1,13 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Info, Users } from "lucide-react";
+import { Info } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CirclePreferenceFields } from "@/components/forms/CirclePreferenceFields";
+import { NativeSelect } from "@/components/forms/NativeSelect";
 import { Button } from "@/components/ui/button";
-import { CIRCLE_CAPACITY, ROUTES, TOPICS } from "@/constants";
-import { createCircle } from "@/services/circleService";
-import type { Circle, CirclePreferences } from "@/types";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ROUTES, TOPICS } from "@/constants";
+import { CIRCLE_SIZE_OPTIONS, createCircle } from "@/services/circleService";
+import type { CirclePreferences } from "@/types";
 
 export const Route = createFileRoute("/circles/new")({
   head: () => ({
@@ -34,45 +37,29 @@ const DEFAULT_PREFERENCES: CirclePreferences = {
   deadline: "",
 };
 
+const MAX_DESCRIPTION = 300;
+
 function MakeCirclePage() {
+  const navigate = useNavigate();
   const [preferences, setPreferences] = useState<CirclePreferences>(DEFAULT_PREFERENCES);
+  const [capacity, setCapacity] = useState<number>(CIRCLE_SIZE_OPTIONS[0] ?? 9);
+  const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [createdCircle, setCreatedCircle] = useState<Circle | null>(null);
+
+  const canSubmit = !submitting && !!preferences.deadline && description.trim().length >= 10;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!canSubmit) return;
     setSubmitting(true);
     try {
-      setCreatedCircle(await createCircle(preferences));
+      const created = await createCircle({ ...preferences, description, capacity });
+      // Show the new circle on its own page (members, progress, details).
+      navigate({ to: ROUTES.circle, params: { circleId: created.id } });
     } finally {
       setSubmitting(false);
     }
   };
-
-  if (createdCircle) {
-    return (
-      <AppShell>
-        <div className="mx-auto max-w-lg py-12 text-center">
-          <Users className="mx-auto size-8 text-primary" />
-          <h1 className="mt-4 text-3xl font-bold">Circle created.</h1>
-          <p className="mt-2 text-lg text-muted-foreground">
-            Waiting for members ({createdCircle.members.length}/{CIRCLE_CAPACITY}).
-          </p>
-          <p className="mt-6 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-            You'll be grouped with your circle once it fills up — just like everyone else.
-          </p>
-          <div className="mt-8 flex justify-center gap-2">
-            <Button asChild variant="outline">
-              <Link to={ROUTES.recommended}>Browse other circles</Link>
-            </Button>
-            <Button asChild>
-              <Link to={ROUTES.profile}>Go to my profile</Link>
-            </Button>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
 
   return (
     <AppShell>
@@ -80,11 +67,50 @@ function MakeCirclePage() {
         <PageHeader
           eyebrow="Make a circle"
           title="Set up your circle"
-          description={`Others with matching preferences will find it. Grouping runs automatically at ${CIRCLE_CAPACITY} members.`}
+          description={`Others with matching preferences will find it. Grouping runs automatically once your circle reaches the size you choose.`}
         />
 
         <form onSubmit={handleSubmit} className="surface space-y-6 p-6 sm:p-8">
           <CirclePreferenceFields value={preferences} onChange={setPreferences} />
+
+          <div className="space-y-2">
+            <Label htmlFor="capacity">Circle size</Label>
+            <NativeSelect
+              id="capacity"
+              value={capacity}
+              onChange={(e) => setCapacity(Number(e.target.value))}
+            >
+              {CIRCLE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size} members
+                </option>
+              ))}
+            </NativeSelect>
+            <p className="text-xs text-muted-foreground">
+              Between 9 and 30 members, in steps of 3 so everyone lands in a balanced sub-group.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Aim of this circle</Label>
+              <span className="text-xs text-muted-foreground">
+                {description.length}/{MAX_DESCRIPTION}
+              </span>
+            </div>
+            <Textarea
+              id="description"
+              value={description}
+              maxLength={MAX_DESCRIPTION}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What will this circle work on? e.g. Daily graph problems, weekly mock contests and honest code reviews."
+              className="min-h-28 bg-card"
+            />
+            <p className="text-xs text-muted-foreground">
+              Shown on your circle's card in Explore Circles so others know what to expect (min. 10
+              characters).
+            </p>
+          </div>
 
           <div className="flex items-start gap-2 rounded-lg bg-muted p-4 text-sm text-muted-foreground">
             <Info className="mt-0.5 size-4 shrink-0" />
@@ -94,13 +120,8 @@ function MakeCirclePage() {
             </p>
           </div>
 
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full sm:w-auto"
-            disabled={submitting || !preferences.deadline}
-          >
-            Create circle
+          <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={!canSubmit}>
+            {submitting ? "Creating…" : "Create circle"}
           </Button>
         </form>
       </div>

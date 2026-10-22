@@ -4,12 +4,9 @@ import { Award } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { CirclePreferenceFields } from "@/components/forms/CirclePreferenceFields";
-import { SkillQuizWizard } from "@/components/forms/SkillQuizWizard";
-import { SkillBadge } from "@/components/shared/SkillBadge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { ROUTES, TOPICS } from "@/constants";
-import type { CirclePreferences, JoinPreferences, SkillLevel } from "@/types";
+import type { CirclePreferences, JoinPreferences } from "@/types";
 
 export const Route = createFileRoute("/circles/join")({
   head: () => ({
@@ -42,25 +39,14 @@ const DEFAULT_PREFERENCES: JoinPreferences = {
 function JoinPreferencesPage() {
   const navigate = useNavigate();
   const [preferences, setPreferences] = useState<JoinPreferences>(DEFAULT_PREFERENCES);
-  const [isTakingQuiz, setIsTakingQuiz] = useState(false);
-  const [hasCompletedQuiz, setHasCompletedQuiz] = useState(false);
 
   const handleCircleFieldsChange = (circleFields: CirclePreferences) =>
     setPreferences((prev) => ({ ...prev, ...circleFields }));
 
-  const handleQuizComplete = (skillLevel: SkillLevel) => {
-    setPreferences((prev) => ({ ...prev, skillLevel }));
-    setHasCompletedQuiz(true);
-    setIsTakingQuiz(false);
-  };
-
   // Preferences travel as search params so the recommendations page can rank against them.
+  // The skill quiz is NOT asked here — it is asked once, when you join a specific circle.
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!hasCompletedQuiz) {
-      setIsTakingQuiz(true);
-      return;
-    }
     navigate({ to: ROUTES.recommended, search: preferences });
   };
 
@@ -70,61 +56,24 @@ function JoinPreferencesPage() {
         <PageHeader
           eyebrow="Join a circle"
           title="What are you looking for?"
-          description="We'll use this to match you with circles. Your assessed skill level is used later to balance your sub-group."
+          description="We'll use this to match you with circles. Your skill level is assessed with a short quiz when you join a circle."
         />
 
-        {isTakingQuiz ? (
-          <SkillQuizWizard
-            topic={preferences.topic}
-            confirmButtonLabel="Save Level & Continue"
-            onComplete={handleQuizComplete}
-            onCancel={() => setIsTakingQuiz(false)}
-          />
-        ) : (
-          <form onSubmit={handleSubmit} className="surface space-y-6 p-6 sm:p-8">
-            <CirclePreferenceFields value={preferences} onChange={handleCircleFieldsChange} />
+        <form onSubmit={handleSubmit} className="surface space-y-6 p-6 sm:p-8">
+          <CirclePreferenceFields value={preferences} onChange={handleCircleFieldsChange} />
 
-            <div className="space-y-3 rounded-xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-semibold">Skill Level Assessment</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Based on our 5-question peer readiness evaluation.
-                  </p>
-                </div>
-                {hasCompletedQuiz ? (
-                  <SkillBadge level={preferences.skillLevel} className="text-xs font-semibold" />
-                ) : (
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                    Not assessed yet
-                  </span>
-                )}
-              </div>
+          <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary-soft/60 p-4">
+            <Award className="mt-0.5 size-5 shrink-0 text-primary" />
+            <p className="text-sm text-muted-foreground">
+              A quick 5-question quiz on the circle's topic is taken when you join a circle, so
+              your sub-group is balanced for that subject.
+            </p>
+          </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-xs text-muted-foreground">
-                  {hasCompletedQuiz
-                    ? `Assessed as ${preferences.skillLevel} in ${preferences.topic}.`
-                    : "Complete a quick 1-minute quiz to evaluate your level."}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsTakingQuiz(true)}
-                  className="gap-1.5"
-                >
-                  <Award className="size-3.5 text-primary" />
-                  {hasCompletedQuiz ? "Retake Quiz" : "Take Skill Quiz"}
-                </Button>
-              </div>
-            </div>
-
-            <Button type="submit" size="lg" className="w-full sm:w-auto">
-              {hasCompletedQuiz ? "Find circles" : "Take Skill Quiz to Continue"}
-            </Button>
-          </form>
-        )}
+          <Button type="submit" size="lg" className="w-full sm:w-auto">
+            Find circles
+          </Button>
+        </form>
       </div>
     </AppShell>
   );

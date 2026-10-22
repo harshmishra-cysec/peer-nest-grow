@@ -16,3 +16,7 @@ export function login(_credentials: Credentials): Promise<User> {
 export function signup(credentials: Credentials): Promise<User> {
   return simulateRequest({ ...CURRENT_USER, name: credentials.name ?? CURRENT_USER.name });
 }
+
+export function logout(): Promise<void> {
+  return simulateRequest(undefined);
+}

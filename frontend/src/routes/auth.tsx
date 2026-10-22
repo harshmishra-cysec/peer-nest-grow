@@ -37,7 +37,7 @@ function AuthPage() {
     try {
       const credentials = { email, password, name };
       await (mode === "login" ? login(credentials) : signup(credentials));
-      navigate({ to: ROUTES.start });
+      navigate({ to: ROUTES.home });
     } finally {
       setSubmitting(false);
     }

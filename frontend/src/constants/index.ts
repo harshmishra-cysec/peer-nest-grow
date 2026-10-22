@@ -45,6 +45,7 @@ export const ROUTES = {
   landing: "/",
   auth: "/auth",
   start: "/start",
+  home: "/home",
   makeCircle: "/circles/new",
   joinPreferences: "/circles/join",
   recommended: "/circles/recommended",

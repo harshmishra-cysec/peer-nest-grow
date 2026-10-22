@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as StartRouteImport } from './routes/start'
 import { Route as CirclesCircleIdRouteImport } from './routes/circles.$circleId'
@@ -27,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -68,6 +74,7 @@ const CirclesCircleIdSubgroupRoute = CirclesCircleIdSubgroupRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/start': typeof StartRoute
   '/circles/$circleId': typeof CirclesCircleIdRouteWithChildren
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/start': typeof StartRoute
   '/circles/$circleId': typeof CirclesCircleIdRouteWithChildren
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/home': typeof HomeRoute
   '/profile': typeof ProfileRoute
   '/start': typeof StartRoute
   '/circles/$circleId': typeof CirclesCircleIdRouteWithChildren
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/home'
     | '/profile'
     | '/start'
     | '/circles/$circleId'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/home'
     | '/profile'
     | '/start'
     | '/circles/$circleId'
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/home'
     | '/profile'
     | '/start'
     | '/circles/$circleId'
@@ -138,6 +150,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
+  HomeRoute: typeof HomeRoute
   ProfileRoute: typeof ProfileRoute
   StartRoute: typeof StartRoute
   CirclesCircleIdRoute: typeof CirclesCircleIdRouteWithChildren
@@ -160,6 +173,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -229,6 +249,7 @@ const CirclesCircleIdRouteWithChildren = CirclesCircleIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
+  HomeRoute: HomeRoute,
   ProfileRoute: ProfileRoute,
   StartRoute: StartRoute,
   CirclesCircleIdRoute: CirclesCircleIdRouteWithChildren,

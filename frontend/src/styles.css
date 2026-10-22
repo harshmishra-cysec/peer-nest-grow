@@ -161,10 +161,65 @@
   }
 }
 
-/* Surface used by every card-like block in the app */
+/* Surface used by every card-like block in the app with interactive hover elevation & subtle glow */
 @utility surface {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    box-shadow:
+      0 16px 32px -8px oklch(0.55 0.22 265 / 0.12),
+      0 8px 16px -6px oklch(0.55 0.22 265 / 0.06);
+    border-color: oklch(0.55 0.22 265 / 0.35);
+  }
+}
+
+/* Hero gradient utility */
+@utility hero-gradient {
+  background: linear-gradient(
+    135deg,
+    oklch(0.97 0.03 265 / 0.8) 0%,
+    oklch(0.99 0.01 250) 50%,
+    oklch(0.96 0.04 285 / 0.7) 100%
+  );
+}
+
+/* Card elevation and subtle interactive glow */
+.interactive-card,
+.recommendation-card,
+.preview-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive-card:hover,
+.recommendation-card:hover,
+.preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 20px 25px -5px oklch(0.55 0.22 265 / 0.1),
+    0 8px 10px -6px oklch(0.55 0.22 265 / 0.05);
+  border-color: oklch(0.55 0.22 265 / 0.4);
+}
+
+/* Ensure main dashboard content clears the fixed top bar */
+body:has(header) main {
+  scroll-margin-top: 5rem;
+}
+
+/* Home dashboard: click feedback (blue press highlight + subtle scale) */
+main[role="tabpanel"] button:not(:disabled),
+main[role="tabpanel"] a[class*="rounded"] {
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+main[role="tabpanel"] button:not(:disabled):active,
+main[role="tabpanel"] a[class*="rounded"]:active {
+  transform: scale(0.98);
+  box-shadow: 0 0 0 3px oklch(0.55 0.22 265 / 0.22);
+}
+/* Global scale: 90% of default (home page overrides to 80% in home.tsx) */
+html {
+  font-size: 90%;
 }

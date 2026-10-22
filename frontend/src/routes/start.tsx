@@ -60,6 +60,15 @@ function StartPage() {
             </Link>
           ))}
         </div>
+
+        <div className="mt-8">
+          <Link
+            to={ROUTES.home}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Or jump straight to your dashboard <ArrowRight className="size-4" />
+          </Link>
+        </div>
       </div>
     </AppShell>
   );

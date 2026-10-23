@@ -10,7 +10,7 @@ export type GoalType = "Learn" | "Build" | "Compete";
 export type CommitmentLevel = "Casual" | "Serious";
 
 /** Stage 1 (matching) circle state, then Stage 2 (grouping) once full. */
-export type CircleStatus = "Open" | "Full" | "Grouped";
+export type CircleStatus = "Open" | "Full" | "Grouped" | "Expired";
 
 export type TaskStatus = "In Progress" | "Pending Peer Confirmation" | "Verified";
 
@@ -32,6 +32,10 @@ export interface CircleMember {
   name: string;
   skillLevel: SkillLevel;
   joinedAt: string; // ISO date
+  /** Circle-specific assessment result (0-100). Skill is per circle, not global. */
+  scorePercent?: number;
+  /** When the single assessment attempt for this circle was submitted (ISO). */
+  assessedAt?: string;
 }
 
 export interface Circle {
@@ -55,6 +59,8 @@ export interface SubGroup {
   /** The Advanced member, auto-assigned by the grouping system. */
   leaderUserId: string;
   members: CircleMember[];
+  /** "Needs Rebalancing" after someone leaves a formed group (no auto-reshuffle). */
+  status?: "Active" | "Needs Rebalancing";
 }
 
 export interface ProofAttachment {

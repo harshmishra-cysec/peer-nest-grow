@@ -10,7 +10,17 @@ import { GOAL_TYPE_HINTS, ROUTES, SUB_GROUP_SIZE } from "@/constants";
 import { useAsyncData } from "@/hooks/useAsyncData";
 import { formatDate, formatLongDate, initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { getCircleById, getCircleCapacity, isCircleFull, joinCircle } from "@/services/circleService";
+import {
+  getCircleById,
+  getCircleCapacity,
+  getMyAssessmentForCircle,
+  isCircleExpired,
+  isCircleFull,
+  isCircleJoinable,
+  joinCircle,
+  leaveCircle,
+} from "@/services/circleService";
+import type { AssessmentResult } from "@/services/assessmentService";
 import { computeBalancedSubGroups } from "@/services/groupingService";
 import { getSubGroupsForCircle } from "@/services/subGroupService";
 import { getCurrentUser } from "@/services/userService";
@@ -83,6 +93,7 @@ function CircleDashboardPage() {
   const { circleId } = Route.useParams();
   const [joining, setJoining] = useState(false);
   const [showQuizModal, setShowQuizModal] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const { data, loading, setData } = useAsyncData(
     () =>
       isChildRoute
@@ -118,6 +129,8 @@ function CircleDashboardPage() {
   }
 
   const full = isCircleFull(circle);
+  const expired = isCircleExpired(circle);
+  const joinable = isCircleJoinable(circle);
   const isMember = circle.members.some((m) => m.userId === currentUser.id);
   const mySubGroup = subGroups.find((group) =>
     group.members.some((m) => m.userId === currentUser.id),
@@ -131,10 +144,14 @@ function CircleDashboardPage() {
   const groupingResult = full ? computeBalancedSubGroups(circle.id, circle.members) : null;
 
   /** Handles joining an open circle with assessed skill level */
-  const handleConfirmJoinWithQuiz = async (assessedLevel: SkillLevel) => {
+  const handleConfirmJoinWithQuiz = async (
+    assessedLevel: SkillLevel,
+    result?: AssessmentResult,
+  ) => {
     setJoining(true);
+    setActionError(null);
     try {
-      const updatedCircle = await joinCircle(circle.id, assessedLevel);
+      const updatedCircle = await joinCircle(circle.id, assessedLevel, result);
       const updatedSubGroups = await getSubGroupsForCircle(circle.id);
       setData((prev) =>
         prev
@@ -145,6 +162,36 @@ function CircleDashboardPage() {
             }
           : prev,
       );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not join this circle.");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  /** One assessment attempt per circle: if you already took it (e.g. you left and rejoin), reuse it. */
+  const handleJoinClick = async () => {
+    const previous = await getMyAssessmentForCircle(circle.id);
+    if (previous) {
+      await handleConfirmJoinWithQuiz(previous.skillLevel);
+    } else {
+      setShowQuizModal(true);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!window.confirm("Leave this circle? Your sub-group (if formed) will need a replacement."))
+      return;
+    setJoining(true);
+    setActionError(null);
+    try {
+      const updatedCircle = await leaveCircle(circle.id);
+      const updatedSubGroups = await getSubGroupsForCircle(circle.id);
+      setData((prev) =>
+        prev ? { ...prev, circle: updatedCircle, subGroups: updatedSubGroups } : prev,
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "Could not leave this circle.");
     } finally {
       setJoining(false);
     }
@@ -194,6 +241,10 @@ function CircleDashboardPage() {
                 <CheckCircle2 className="size-3.5" />
                 <span>Full · Sub-Groups Formed</span>
               </span>
+            ) : expired ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3.5 py-1 text-xs font-medium text-rose-700">
+                <span>Expired · Deadline passed</span>
+              </span>
             ) : isMember ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/90 bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-500 shadow-2xs">
                 <span>Joined · Awaiting Capacity</span>
@@ -204,9 +255,21 @@ function CircleDashboardPage() {
               </span>
             )}
 
-            {!full && !isMember && (
+            {isMember && (
               <Button
-                onClick={() => setShowQuizModal(true)}
+                variant="outline"
+                size="sm"
+                onClick={handleLeave}
+                disabled={joining}
+                className="text-xs"
+              >
+                Leave circle
+              </Button>
+            )}
+
+            {joinable && !isMember && (
+              <Button
+                onClick={handleJoinClick}
                 disabled={joining}
                 size="sm"
                 className="gap-1.5 text-xs shadow-sm"
@@ -216,6 +279,12 @@ function CircleDashboardPage() {
             )}
           </div>
         </section>
+
+        {actionError && (
+          <p className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">
+            {actionError}
+          </p>
+        )}
 
         {/* 2. STATS ROW (three cards side by side matching reference) */}
         <section className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

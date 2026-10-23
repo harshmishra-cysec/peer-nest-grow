@@ -15,6 +15,8 @@ export interface QuizQuestion {
 export interface AssessmentResult {
   score: number;
   maxScore: number;
+  /** score / maxScore x 100 (two decimals). */
+  percentage: number;
   skillLevel: SkillLevel;
   explanation: string;
 }
@@ -858,27 +860,29 @@ export function getQuestionsForTopic(topic?: string): QuizQuestion[] {
   return match ? match.questions : ASSESSMENT_QUESTIONS;
 }
 
-/** Score bands from the JSON: Beginner 0-5, Intermediate 6-10, Advanced 11-15. */
-const LEVEL_BANDS = { INTERMEDIATE_MIN: 6, ADVANCED_MIN: 11 } as const;
+/**
+ * Skill bands by percentage: 0-39% Beginner, 40-69% Intermediate, 70-100% Advanced.
+ * With 5 questions x 3 points (max 15) this equals the JSON bands 0-5 / 6-10 / 11-15.
+ */
+export function levelFromPercent(percentage: number): SkillLevel {
+  if (percentage >= 70) return "Advanced";
+  if (percentage >= 40) return "Intermediate";
+  return "Beginner";
+}
 
-/** Pure scoring function: sums answer scores (max 15) and maps them to a level. */
+/** Pure scoring function: sums answer scores, converts to a percentage, maps to a level. */
 export function calculateAssessmentResult(answers: Record<string, number>): AssessmentResult {
   const score = Object.values(answers).reduce((sum, val) => sum + val, 0);
   const maxScore = 15;
+  const percentage = Math.round((score / maxScore) * 10000) / 100;
+  const skillLevel = levelFromPercent(percentage);
 
-  let skillLevel: SkillLevel = "Beginner";
-  let explanation =
-    "You'll be placed as a Developing (Beginner) learner to master fundamentals alongside peers.";
+  const explanation =
+    skillLevel === "Advanced"
+      ? "You'll be placed as a Strong (Advanced) learner in a balanced group, eligible to lead sub-group activities."
+      : skillLevel === "Intermediate"
+        ? "You'll be placed as an Average (Intermediate) learner, bridging foundational and advanced concepts."
+        : "You'll be placed as a Developing (Beginner) learner to master fundamentals alongside peers.";
 
-  if (score >= LEVEL_BANDS.ADVANCED_MIN) {
-    skillLevel = "Advanced";
-    explanation =
-      "You'll be placed as a Strong (Advanced) learner in a balanced group, eligible to lead sub-group activities.";
-  } else if (score >= LEVEL_BANDS.INTERMEDIATE_MIN) {
-    skillLevel = "Intermediate";
-    explanation =
-      "You'll be placed as an Average (Intermediate) learner, bridging foundational and advanced concepts.";
-  }
-
-  return { score, maxScore, skillLevel, explanation };
+  return { score, maxScore, percentage, skillLevel, explanation };
 }

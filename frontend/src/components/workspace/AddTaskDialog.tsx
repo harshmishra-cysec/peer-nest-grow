@@ -18,6 +18,8 @@ import type { CircleMember } from "@/types";
 interface AddTaskDialogProps {
   members: CircleMember[];
   defaultAssigneeUserId: string;
+  /** Only the group leader can assign tasks to other members. */
+  canAssignOthers?: boolean;
   onCreate: (input: NewTaskInput) => Promise<void>;
 }
 
@@ -27,8 +29,16 @@ function getDefaultDueDate() {
   return target.toISOString().split("T")[0];
 }
 
-/** Any member can add a task — creation is intentionally not leader-only. */
-export function AddTaskDialog({ members, defaultAssigneeUserId, onCreate }: AddTaskDialogProps) {
+/** Any member can add a task; only the leader can assign it to someone else. */
+export function AddTaskDialog({
+  members,
+  defaultAssigneeUserId,
+  canAssignOthers = false,
+  onCreate,
+}: AddTaskDialogProps) {
+  const assignable = canAssignOthers
+    ? members
+    : members.filter((m) => m.userId === defaultAssigneeUserId);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<NewTaskInput>({
@@ -93,7 +103,7 @@ export function AddTaskDialog({ members, defaultAssigneeUserId, onCreate }: AddT
                 value={form.assigneeUserId}
                 onChange={(e) => setForm({ ...form, assigneeUserId: e.target.value })}
               >
-                {members.map((member) => (
+                {assignable.map((member) => (
                   <option key={member.userId} value={member.userId}>
                     {member.name}
                   </option>

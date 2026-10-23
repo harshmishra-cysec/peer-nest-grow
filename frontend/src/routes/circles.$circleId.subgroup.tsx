@@ -325,10 +325,11 @@ function SubGroupWorkspacePage() {
                       Track deliverables, attach proof, and verify peer submissions.
                     </p>
                   </div>
-                  {/* Any member can add tasks — creation is intentionally not leader-only. */}
+                  {/* Any member can add tasks; only the leader can assign them to others. */}
                   <AddTaskDialog
                     members={subGroup.members}
                     defaultAssigneeUserId={currentUser.id}
+                    canAssignOthers={subGroup.leaderUserId === currentUser.id}
                     onCreate={handleCreateTask}
                   />
                 </div>

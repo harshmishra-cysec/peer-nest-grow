@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SkillQuizWizard } from "@/components/forms/SkillQuizWizard";
+import type { AssessmentResult } from "@/services/assessmentService";
 import type { SkillLevel } from "@/types";
 
 interface JoinCircleQuizModalProps {
@@ -13,7 +14,7 @@ interface JoinCircleQuizModalProps {
   onOpenChange: (open: boolean) => void;
   circleName: string;
   topic: string;
-  onConfirmJoin: (assessedSkillLevel: SkillLevel) => void;
+  onConfirmJoin: (assessedSkillLevel: SkillLevel, result: AssessmentResult) => void;
 }
 
 export function JoinCircleQuizModal({
@@ -29,8 +30,8 @@ export function JoinCircleQuizModal({
         <SkillQuizWizard
           topic={topic}
           confirmButtonLabel={`Join "${circleName}"`}
-          onComplete={(level) => {
-            onConfirmJoin(level);
+          onComplete={(level, result) => {
+            onConfirmJoin(level, result);
             onOpenChange(false);
           }}
           onCancel={() => onOpenChange(false)}

@@ -64,7 +64,7 @@ export function HomeTopBar({ user, selectedId, onSelect }: HomeTopBarProps) {
   };
 
   return (
-    <header className="h-[4.5rem] shrink-0 border-b border-sky-100 bg-white/80 px-4 backdrop-blur-md sm:px-6">
+    <header className="h-[5rem] shrink-0 border-b border-sky-100 bg-white/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex h-full items-center justify-between gap-2 sm:gap-4">
         {/* Left: Brand Logo */}
         <div className="shrink-0">
@@ -99,7 +99,7 @@ export function HomeTopBar({ user, selectedId, onSelect }: HomeTopBarProps) {
                   type="button"
                   onClick={() => onSelect(item.id)}
                   className={cn(
-                    "relative z-10 rounded-full px-5 py-2 text-sm sm:text-base font-semibold whitespace-nowrap transition-colors duration-200",
+                    "relative z-10 rounded-full px-6 py-2.5 text-base sm:text-lg font-semibold whitespace-nowrap transition-colors duration-200",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]",
                     isActive
                       ? "text-white"
@@ -117,10 +117,10 @@ export function HomeTopBar({ user, selectedId, onSelect }: HomeTopBarProps) {
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {/* Streak Badge */}
           <div
-            className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-700 sm:px-3"
+            className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-base font-semibold text-amber-700"
             title={`${user.currentStreakDays} day learning streak`}
           >
-            <Flame className="size-4 text-amber-600" />
+            <Flame className="size-5 text-amber-600" />
             <span className="hidden sm:inline">{user.currentStreakDays} days</span>
             <span className="sm:hidden">{user.currentStreakDays}d</span>
           </div>
@@ -128,11 +128,11 @@ export function HomeTopBar({ user, selectedId, onSelect }: HomeTopBarProps) {
           {/* Notifications button */}
           <button
             type="button"
-            className="relative flex size-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-sky-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]"
+            className="relative flex size-11 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-sky-50 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]"
             title="No new notifications"
             aria-label="Notifications"
           >
-            <Bell className="size-5" />
+            <Bell className="size-6" />
           </button>
 
           {/* Profile Dropdown */}
@@ -143,8 +143,8 @@ export function HomeTopBar({ user, selectedId, onSelect }: HomeTopBarProps) {
                 className="flex items-center gap-2 rounded-full p-0.5 text-left text-sm font-medium transition-all hover:ring-2 hover:ring-sky-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]"
                 aria-label="User account menu"
               >
-                <MemberAvatar name={user.name} size="sm" />
-                <span className="hidden text-xs sm:text-sm font-semibold text-slate-800 md:inline">
+                <MemberAvatar name={user.name} size="md" />
+                <span className="hidden text-sm sm:text-base font-semibold text-slate-800 md:inline">
                   Hi, {firstName}
                 </span>
               </button>

@@ -1,3 +1,4 @@
+import { CircleSwitcher } from "./CircleSwitcher";
 import { type HomeNavId } from "./homeNavItems";
 import { CircleDashboardPreview } from "./previews/CircleDashboardPreview";
 import { GroupingPreview } from "./previews/GroupingPreview";
@@ -24,6 +25,19 @@ interface HomePreviewPanelProps {
   badges: Badge[];
   activity: ActivityItem[];
   completedTasks: number;
+  /** Switching between joined circles (Circle Dashboard / My Sub-Groups). */
+  onSelectCircle: (circleId: string) => void;
+  /** True while the selected circle's sub-group, tasks and grouping are loading. */
+  detailLoading: boolean;
+}
+
+function DetailLoading() {
+  return (
+    <div className="surface flex items-center gap-3 p-6">
+      <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <p className="text-sm font-semibold text-muted-foreground">Loading circle details…</p>
+    </div>
+  );
 }
 
 /**
@@ -44,6 +58,8 @@ export function HomePreviewPanel({
   badges,
   activity,
   completedTasks,
+  onSelectCircle,
+  detailLoading,
 }: HomePreviewPanelProps) {
   const firstName = currentUser.name.trim().split(" ")[0] || "Learner";
 
@@ -69,7 +85,15 @@ export function HomePreviewPanel({
               badge="Active Cohort"
             />
             {primaryCircle ? (
-              <CircleDashboardPreview circle={primaryCircle} groupingAnalysis={groupingAnalysis} />
+              detailLoading ? (
+                <DetailLoading />
+              ) : (
+                <CircleDashboardPreview
+                  key={primaryCircle.id}
+                  circle={primaryCircle}
+                  groupingAnalysis={groupingAnalysis}
+                />
+              )
             ) : (
               <RecommendedPreview circles={allCircles} currentUser={currentUser} />
             )}
@@ -85,20 +109,50 @@ export function HomePreviewPanel({
         )}
 
         {selectedId === "circle-dashboard" && (
-          <CircleDashboardPreview circle={primaryCircle} groupingAnalysis={groupingAnalysis} />
+          <div className="space-y-6">
+            <CircleSwitcher
+              circles={myCircles}
+              activeId={primaryCircle?.id}
+              onSelect={onSelectCircle}
+              mode="circle"
+            />
+            {detailLoading ? (
+              <DetailLoading />
+            ) : (
+              <CircleDashboardPreview
+                key={primaryCircle?.id}
+                circle={primaryCircle}
+                groupingAnalysis={groupingAnalysis}
+              />
+            )}
+          </div>
         )}
 
         {selectedId === "subgroup-workspace" && (
-          <WorkspacePreview
-            circle={primaryCircle}
-            subGroup={mySubGroup}
-            initialTasks={tasks}
-            currentUser={currentUser}
-          />
+          <div className="space-y-6">
+            <CircleSwitcher
+              circles={myCircles}
+              activeId={primaryCircle?.id}
+              onSelect={onSelectCircle}
+              mode="subgroup"
+            />
+            {detailLoading ? (
+              <DetailLoading />
+            ) : (
+              <WorkspacePreview
+                key={primaryCircle?.id}
+                circle={primaryCircle}
+                subGroup={mySubGroup}
+                initialTasks={tasks}
+                currentUser={currentUser}
+              />
+            )}
+          </div>
         )}
 
         {selectedId === "peer-verification" && (
           <VerificationPreview
+            key={primaryCircle?.id}
             circle={primaryCircle}
             subGroup={mySubGroup}
             tasks={tasks}

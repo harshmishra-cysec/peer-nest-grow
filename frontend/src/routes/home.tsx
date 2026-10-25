@@ -38,11 +38,8 @@ export const Route = createFileRoute("/home")({
 });
 
 /**
- * Loads all primary dashboard data in one pass client-side via useAsyncData.
- * Hierarchy:
- * - getCurrentUser, getMyCircles, getMyBadges, getMyActivity, getMyCompletedTaskCount, getCircles
- * - primaryCircle = first with status "Grouped", otherwise first circle, otherwise none.
- * - For primaryCircle: load getMySubGroupForCircle, then getTasks(subGroupId), getGroupingAnalysisForCircle.
+ * Base dashboard data (user, joined circles, badges, activity...). Loaded once.
+ * primaryCircle = first "Grouped" circle, otherwise the first circle, otherwise none.
  */
 async function loadHomeData() {
   const [currentUser, myCircles, badges, activity, completedTasks, allCircles] = await Promise.all([
@@ -54,58 +51,43 @@ async function loadHomeData() {
     getCircles(),
   ]);
 
-  // Pick user's primary circle: first with status "Grouped", otherwise first circle, otherwise none
   const primaryCircle = myCircles.find((c) => c.status === "Grouped") || myCircles[0] || undefined;
 
-  let mySubGroup: Awaited<ReturnType<typeof getMySubGroupForCircle>> | undefined = undefined;
-  let tasks: Awaited<ReturnType<typeof getTasks>> = [];
+  return { currentUser, myCircles, badges, activity, completedTasks, allCircles, primaryCircle };
+}
 
-  let groupingAnalysis:
+/**
+ * Per-circle details, loaded whenever the user picks a different circle:
+ * their sub-group, its tasks and the grouping analysis (tier counts + balance).
+ */
+async function loadCircleDetail(circleId: string) {
+  const [mySubGroup, analysis] = await Promise.all([
+    getMySubGroupForCircle(circleId),
+    getGroupingAnalysisForCircle(circleId),
+  ]);
+
+  // Normalize grouping analysis to provide tier counts and isBalanced flag required by CircleDashboard
+  const groupingAnalysis:
     | (GroupingResult & {
         isBalanced?: boolean;
         stats?: { tierCounts: { Advanced: number; Intermediate: number; Beginner: number } };
       })
-    | null = null;
-
-  if (primaryCircle) {
-    const [subGroup, analysis] = await Promise.all([
-      getMySubGroupForCircle(primaryCircle.id),
-      getGroupingAnalysisForCircle(primaryCircle.id),
-    ]);
-    mySubGroup = subGroup;
-
-    // Normalize grouping analysis to provide tier counts and isBalanced flag required by CircleDashboard
-    groupingAnalysis = analysis
-      ? {
-          ...analysis,
-          isBalanced: analysis.isPerfectBalance,
-          stats: {
-            tierCounts: {
-              Advanced: analysis.tierCounts?.strong ?? 3,
-              Intermediate: analysis.tierCounts?.average ?? 3,
-              Beginner: analysis.tierCounts?.weak ?? 3,
-            },
+    | null = analysis
+    ? {
+        ...analysis,
+        isBalanced: analysis.isPerfectBalance,
+        stats: {
+          tierCounts: {
+            Advanced: analysis.tierCounts?.strong ?? 3,
+            Intermediate: analysis.tierCounts?.average ?? 3,
+            Beginner: analysis.tierCounts?.weak ?? 3,
           },
-        }
-      : null;
+        },
+      }
+    : null;
 
-    if (subGroup) {
-      tasks = await getTasks(subGroup.id);
-    }
-  }
-
-  return {
-    currentUser,
-    myCircles,
-    badges,
-    activity,
-    completedTasks,
-    allCircles,
-    primaryCircle,
-    mySubGroup,
-    tasks,
-    groupingAnalysis,
-  };
+  const tasks = mySubGroup ? await getTasks(mySubGroup.id) : [];
+  return { circleId, mySubGroup, tasks, groupingAnalysis };
 }
 
 function HomePage() {
@@ -123,7 +105,16 @@ function HomePage() {
       document.documentElement.style.fontSize = "";
     };
   }, []);
+  const [activeCircleId, setActiveCircleId] = useState<string | null>(null);
   const { data, loading } = useAsyncData(loadHomeData, []);
+
+  // The circle shown in Circle Dashboard / My Sub-Groups / Peer Verification
+  const activeId = activeCircleId ?? data?.primaryCircle?.id;
+  const { data: detail, loading: detailBusy } = useAsyncData(
+    () => (activeId ? loadCircleDetail(activeId) : Promise.resolve(undefined)),
+    [activeId],
+  );
+  const detailLoading = !!activeId && (detailBusy || detail?.circleId !== activeId);
 
   if (loading || !data) {
     return (
@@ -143,11 +134,14 @@ function HomePage() {
     activity,
     completedTasks,
     allCircles,
-    primaryCircle,
-    mySubGroup,
-    tasks,
-    groupingAnalysis,
+    primaryCircle: defaultCircle,
   } = data;
+
+  const activeCircle = myCircles.find((c) => c.id === activeId) ?? defaultCircle;
+  const current = detail && detail.circleId === activeId ? detail : undefined;
+  const mySubGroup = current?.mySubGroup;
+  const tasks = current?.tasks ?? [];
+  const groupingAnalysis = current?.groupingAnalysis ?? null;
 
   return (
     <div className="flex h-dvh w-screen flex-col overflow-hidden bg-gradient-to-b from-[#EBF3FF] via-[#EEF7F8] to-[#F9FBFC] text-foreground">
@@ -170,13 +164,15 @@ function HomePage() {
           currentUser={currentUser}
           allCircles={allCircles}
           myCircles={myCircles}
-          primaryCircle={primaryCircle}
+          primaryCircle={activeCircle}
           mySubGroup={mySubGroup}
           tasks={tasks}
           groupingAnalysis={groupingAnalysis}
           badges={badges}
           activity={activity}
           completedTasks={completedTasks}
+          onSelectCircle={setActiveCircleId}
+          detailLoading={detailLoading}
         />
       </div>
     </div>

@@ -1,12 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Award, CheckCircle2, Flame, Sparkles, Trophy, Users, type LucideIcon } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Flame } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { MemberAvatar } from "@/components/shared/MemberAvatar";
 import { SkillBadge } from "@/components/shared/SkillBadge";
-import { StatCard } from "@/components/shared/StatCard";
-import { CIRCLE_CAPACITY, ROUTES } from "@/constants";
+import { ProfileOverview } from "@/components/profile/ProfileOverview";
 import { useAsyncData } from "@/hooks/useAsyncData";
-import { formatDate, formatRelative } from "@/lib/format";
 import { getMyCircles } from "@/services/circleService";
 import { getMySubGroupForCircle } from "@/services/subGroupService";
 import {
@@ -15,7 +12,6 @@ import {
   getMyBadges,
   getMyCompletedTaskCount,
 } from "@/services/userService";
-import type { Badge } from "@/types";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -28,14 +24,6 @@ export const Route = createFileRoute("/profile")({
   }),
   component: ProfilePage,
 });
-
-const BADGE_ICONS: Record<Badge["icon"], LucideIcon> = {
-  trophy: Trophy,
-  flame: Flame,
-  users: Users,
-  "check-circle": CheckCircle2,
-  sparkles: Sparkles,
-};
 
 async function loadProfile() {
   const [user, circles, badges, activity, completedTasks] = await Promise.all([
@@ -62,108 +50,49 @@ function ProfilePage() {
   }
 
   const { user, circles, badges, activity, completedTasks, subGroups } = data;
+  const workspaceCircleIds = new Set(
+    circles.filter((_, index) => !!subGroups[index]).map((circle) => circle.id),
+  );
 
   return (
     <AppShell>
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <MemberAvatar name={user.name} size="lg" />
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold">{user.name}</h1>
-            <SkillBadge level={user.skillBaseline} />
+      <header className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-100 via-white to-blue-50 p-6 shadow-card sm:p-8">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-10 -top-16 size-64 rounded-full bg-primary/10 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+          <span className="grid size-20 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-blue-500 text-2xl font-bold text-white shadow-lg ring-4 ring-white">
+            {user.name
+              .split(" ")
+              .map((part) => part.charAt(0))
+              .join("")
+              .slice(0, 2)
+              .toUpperCase()}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{user.name}</h1>
+              <SkillBadge level={user.skillBaseline} />
+            </div>
+            <p className="mt-1.5 max-w-xl text-muted-foreground">{user.bio}</p>
           </div>
-          <p className="mt-1 max-w-xl text-muted-foreground">{user.bio}</p>
+          <div className="flex items-center gap-2 self-start rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 sm:self-center">
+            <Flame className="size-5 fill-amber-400 text-amber-600" />
+            {user.currentStreakDays}-day streak
+          </div>
         </div>
       </header>
 
-      <section className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard Icon={Users} label="Joined circles" value={circles.length} />
-        <StatCard Icon={CheckCircle2} label="Completed tasks" value={completedTasks} />
-        <StatCard Icon={Award} label="Badges earned" value={badges.length} />
-        <StatCard
-          Icon={Flame}
-          label="Current streak"
-          value={`${user.currentStreakDays}d`}
-          tone="warning"
+      <div className="mt-8">
+        <ProfileOverview
+          user={user}
+          circles={circles}
+          badges={badges}
+          activity={activity}
+          completedTasks={completedTasks}
+          workspaceCircleIds={workspaceCircleIds}
         />
-      </section>
-
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="space-y-8">
-          <section>
-            <h2 className="text-lg font-semibold">Active circles</h2>
-            <ul className="surface mt-4 divide-y">
-              {circles.map((circle, index) => {
-                const subGroup = subGroups[index];
-                return (
-                  <li
-                    key={circle.id}
-                    className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-semibold">{circle.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {circle.topic} · {circle.members.length}/{CIRCLE_CAPACITY} members · due{" "}
-                        {formatDate(circle.deadline)}
-                      </p>
-                    </div>
-                    <div className="flex gap-4 text-sm font-semibold text-primary">
-                      <Link
-                        to={ROUTES.circle}
-                        params={{ circleId: circle.id }}
-                        className="hover:underline"
-                      >
-                        Circle
-                      </Link>
-                      {subGroup && (
-                        <Link
-                          to={ROUTES.subGroup}
-                          params={{ circleId: circle.id }}
-                          className="hover:underline"
-                        >
-                          Workspace
-                        </Link>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-lg font-semibold">Badges</h2>
-            <ul className="mt-4 grid gap-4 sm:grid-cols-3">
-              {badges.map((badge) => {
-                const Icon = BADGE_ICONS[badge.icon];
-                return (
-                  <li key={badge.id} className="surface p-4">
-                    <Icon className="size-5 text-primary" />
-                    <p className="mt-3 font-semibold">{badge.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{badge.description}</p>
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Earned {formatDate(badge.earnedAt)}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        </div>
-
-        <section>
-          <h2 className="text-lg font-semibold">Recent activity</h2>
-          <ol className="surface mt-4 divide-y">
-            {activity.map((item) => (
-              <li key={item.id} className="p-4">
-                <p className="text-sm">{item.text}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {formatRelative(item.occurredAt)}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </section>
       </div>
     </AppShell>
   );

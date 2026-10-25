@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowRight, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { HOME_NAV_ITEMS, type HomeNavId } from "./homeNavItems";
+import { ROUTES } from "@/constants";
 import { cn } from "@/lib/utils";
 
 interface HomeSidebarProps {
@@ -18,6 +20,7 @@ interface HomeSidebarProps {
  * - Mobile: Horizontal scrollable tab bar under top bar.
  */
 export function HomeSidebar({ selectedId, onSelect, isMobileLayout = false }: HomeSidebarProps) {
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const itemRefs = useRef<Map<HomeNavId, HTMLButtonElement | null>>(new Map());
 
@@ -111,24 +114,30 @@ export function HomeSidebar({ selectedId, onSelect, isMobileLayout = false }: Ho
   }
 
   /* =========================================================================
-   * Desktop Vertical sidebar (w-64 <-> w-16, full height under top bar)
-   * Subtle vertical gradient: white -> very light blue -> slightly deeper blue
+   * Desktop vertical sidebar (collapsible), full height under the top bar.
+   * Items: icon tile + label; the selected item is a blue gradient pill with an arrow.
+   * Bottom: round Logout button + collapse toggle.
    * ========================================================================= */
   return (
     <aside
       className={cn(
         "hidden shrink-0 border-r border-sky-100/90 lg:flex lg:flex-col justify-between overflow-y-auto overflow-x-hidden transition-[width] duration-300 ease-in-out",
-        "bg-gradient-to-b from-white via-[#F0F6FF] to-[#E3EEFF]",
-        isCollapsed ? "w-16" : "w-72",
+        "bg-gradient-to-b from-white via-[#EEF5FF] to-[#DCE9FF]",
+        isCollapsed ? "w-20" : "w-80",
       )}
       aria-label="Dashboard navigation"
     >
-      <div className="flex flex-col gap-2 p-3">
+      <div className="flex flex-col gap-2 p-4">
+        {!isCollapsed && (
+          <p className="px-3 pb-1 pt-1 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Menu
+          </p>
+        )}
         <div
           role="tablist"
           aria-orientation="vertical"
           aria-label="Dashboard sections"
-          className="space-y-1.5"
+          className="space-y-2"
         >
           {HOME_NAV_ITEMS.map((item, index) => {
             const Icon = item.icon;
@@ -149,49 +158,68 @@ export function HomeSidebar({ selectedId, onSelect, isMobileLayout = false }: Ho
                 onClick={() => onSelect(item.id)}
                 onKeyDown={(e) => handleKeyDown(e, index)}
                 className={cn(
-                  "group relative flex items-center overflow-hidden rounded-xl font-medium transition-all duration-200",
+                  "group relative flex items-center overflow-hidden rounded-2xl text-base font-semibold transition-all duration-200",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]",
-                  isCollapsed ? "h-11 w-11 mx-auto justify-center" : "w-full gap-3 px-4 py-3.5 text-base font-semibold",
+                  isCollapsed ? "mx-auto size-12 justify-center" : "w-full gap-3 py-2.5 pl-2.5 pr-2.5",
                   isSelected
-                    ? "bg-gradient-to-r from-primary to-blue-600 text-white shadow-sm font-bold"
-                    : "text-slate-600 hover:bg-sky-50/80 hover:text-primary",
+                    ? "bg-gradient-to-r from-primary to-blue-600 text-white shadow-md shadow-primary/25"
+                    : "text-slate-600 hover:bg-white hover:text-primary hover:shadow-sm",
                 )}
               >
                 {/* Diagonal shine sweep on hover */}
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/35 to-transparent skew-x-12 transition-transform duration-700 ease-out group-hover:translate-x-full"
+                  className="pointer-events-none absolute inset-0 -translate-x-full skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full"
                 />
 
-                {/* Left accent bar on hover when not selected */}
-                {!isSelected && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                  />
-                )}
-
-                <Icon
+                <span
                   className={cn(
-                    "size-5 shrink-0 transition-colors",
-                    isSelected ? "text-white" : "text-slate-500 group-hover:text-primary",
+                    "relative grid shrink-0 place-items-center rounded-xl transition-colors",
+                    isCollapsed ? "size-10" : "size-11",
+                    isSelected
+                      ? "bg-white/20 text-white"
+                      : "bg-sky-100/80 text-primary group-hover:bg-primary/10",
                   )}
-                />
+                >
+                  <Icon className="size-5" />
+                </span>
 
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
+                {!isCollapsed && <span className="relative flex-1 truncate text-left">{item.label}</span>}
+
+                {!isCollapsed && isSelected && (
+                  <span className="relative grid size-8 shrink-0 place-items-center rounded-full bg-white text-primary shadow-sm">
+                    <ArrowRight className="size-4" />
+                  </span>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Collapse/Expand Toggle Button */}
-      <div className="p-3 border-t border-sky-100/80">
+      <div className="space-y-1 border-t border-sky-100/80 p-4">
+        {/* Logout */}
+        <button
+          type="button"
+          onClick={() => navigate({ to: ROUTES.auth })}
+          title={isCollapsed ? "Logout" : undefined}
+          className={cn(
+            "group flex w-full items-center gap-3 rounded-2xl p-1.5 text-left font-semibold text-slate-700 transition-colors hover:bg-white hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]",
+            isCollapsed && "justify-center",
+          )}
+        >
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-blue-700 text-white shadow-md transition-transform duration-200 group-hover:scale-105">
+            <LogOut className="size-5" />
+          </span>
+          {!isCollapsed && <span>Logout</span>}
+        </button>
+
+        {/* Collapse/Expand Toggle Button */}
         <button
           type="button"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "flex w-full items-center rounded-xl p-2.5 text-xs sm:text-sm font-medium text-slate-500 transition-colors hover:bg-white/80 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]",
+            "flex w-full items-center rounded-xl p-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-white/80 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]",
             isCollapsed ? "justify-center" : "justify-between",
           )}
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}

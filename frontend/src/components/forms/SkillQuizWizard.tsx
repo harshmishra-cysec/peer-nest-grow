@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Award, CheckCircle2, HelpCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Award,
+  CheckCircle2,
+  HelpCircle,
+} from "lucide-react";
 import { SkillBadge } from "@/components/shared/SkillBadge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -25,23 +31,31 @@ export function SkillQuizWizard({
 }: SkillQuizWizardProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
-  const [completedResult, setCompletedResult] = useState<AssessmentResult | null>(null);
+  const [completedResult, setCompletedResult] =
+    useState<AssessmentResult | null>(null);
 
   const questions = useMemo(() => getQuestionsForTopic(topic), [topic]);
   const totalQuestions = questions.length;
   const currentQuestion = questions[currentQuestionIndex]!;
+
   const selectedOptionScore = answers[currentQuestion.id];
 
   const handleSelectOption = (score: number) => {
-    setAnswers((prev) => ({ ...prev, [currentQuestion.id]: score }));
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: score,
+    }));
   };
 
   const handleNext = () => {
     if (currentQuestionIndex < totalQuestions - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
     } else {
-      // Calculate assessment result through isolated service function
-      const result = calculateAssessmentResult(answers);
+      const result = calculateAssessmentResult(
+        answers,
+        questions.map((question) => question.id),
+      );
+
       setCompletedResult(result);
     }
   };
@@ -51,6 +65,7 @@ export function SkillQuizWizard({
       setCompletedResult(null);
       return;
     }
+
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex((prev) => prev - 1);
     } else if (onCancel) {
@@ -58,23 +73,29 @@ export function SkillQuizWizard({
     }
   };
 
-  const progressPercent = Math.round(((currentQuestionIndex + 1) / totalQuestions) * 100);
+  const progressPercent = Math.round(
+    ((currentQuestionIndex + 1) / totalQuestions) * 100,
+  );
 
-  // Result View
   if (completedResult) {
     return (
-      <div className="surface space-y-6 p-6 sm:p-8">
+      <div className="surface space-y-6 p-6 text-foreground sm:p-8">
         <div className="flex items-center gap-3 border-b border-border pb-4">
           <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <Award className="size-5" />
           </div>
+
           <div>
-            <h3 className="text-xl font-bold">Assessed Skill Level</h3>
-            <p className="text-xs text-muted-foreground">Evaluation for {topic}</p>
+            <h3 className="text-xl font-bold text-foreground">
+              Assessed Skill Level
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Evaluation for {topic}
+            </p>
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
+        <div className="space-y-4 rounded-xl border border-border bg-card p-6 text-center">
           <div className="flex justify-center">
             <SkillBadge
               level={completedResult.skillLevel}
@@ -83,15 +104,19 @@ export function SkillQuizWizard({
           </div>
 
           <div className="space-y-1">
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-foreground">
               Score: {completedResult.score} / {completedResult.maxScore}
             </p>
-            <p className="text-sm text-muted-foreground">{completedResult.explanation}</p>
+
+            <p className="text-sm text-muted-foreground">
+              {completedResult.explanation}
+            </p>
           </div>
 
           <div className="rounded-lg bg-surface p-3 text-xs text-muted-foreground">
-            Balanced engine evaluation: Grouping will automatically balance you with peers of
-            complementary skill tiers when capacity reaches 9.
+            Balanced engine evaluation: Grouping will automatically balance
+            you with peers of complementary skill tiers when capacity reaches
+            9.
           </div>
         </div>
 
@@ -101,53 +126,60 @@ export function SkillQuizWizard({
             onClick={handleBack}
             className="gap-1.5 text-xs text-muted-foreground"
           >
-            <ArrowLeft className="size-3.5" /> Retake Quiz
+            <ArrowLeft className="size-3.5" />
+            Retake Quiz
           </Button>
+
           <Button
             size="lg"
-            onClick={() => onComplete(completedResult.skillLevel, completedResult)}
+            onClick={() =>
+              onComplete(completedResult.skillLevel, completedResult)
+            }
             className="gap-2"
           >
-            <CheckCircle2 className="size-4" /> {confirmButtonLabel}
+            <CheckCircle2 className="size-4" />
+            {confirmButtonLabel}
           </Button>
         </div>
       </div>
     );
   }
 
-  // Question Wizard Step View
   return (
-    <div className="surface space-y-6 p-6 sm:p-8">
-      {/* Header and Progress */}
+    <div className="surface space-y-6 p-6 text-foreground sm:p-8">
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <HelpCircle className="size-3.5 text-primary" /> Skill Assessment · {topic}
+            <HelpCircle className="size-3.5 text-primary" />
+            Skill Assessment · {topic}
           </span>
+
           <span>
             Question {currentQuestionIndex + 1} of {totalQuestions}
           </span>
         </div>
+
         <Progress value={progressPercent} className="h-1.5" />
       </div>
 
-      {/* Question Prompt */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold leading-snug sm:text-xl">{currentQuestion.prompt}</h3>
+        <h3 className="text-lg font-semibold leading-snug text-foreground sm:text-xl">
+          {currentQuestion.prompt}
+        </h3>
 
-        {/* Options List */}
         <div className="space-y-2.5">
           {currentQuestion.options.map((option) => {
             const isSelected = selectedOptionScore === option.score;
+
             return (
               <button
                 key={option.id}
                 type="button"
                 onClick={() => handleSelectOption(option.score)}
-                className={`w-full rounded-xl border p-4 text-left transition-all flex items-start gap-3 ${
+                className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-all ${
                   isSelected
                     ? "border-primary bg-primary/5 text-foreground shadow-2xs"
-                    : "border-border bg-card text-muted-foreground hover:border-border/80 hover:bg-surface"
+                    : "border-border bg-card text-foreground hover:border-border/80 hover:bg-surface"
                 }`}
               >
                 <div
@@ -157,9 +189,16 @@ export function SkillQuizWizard({
                       : "border-border"
                   }`}
                 >
-                  {isSelected && <span className="size-1.5 rounded-full bg-background" />}
+                  {isSelected && (
+                    <span className="size-1.5 rounded-full bg-background" />
+                  )}
                 </div>
-                <span className={`text-sm ${isSelected ? "font-medium text-foreground" : ""}`}>
+
+                <span
+                  className={`text-sm text-foreground ${
+                    isSelected ? "font-medium" : ""
+                  }`}
+                >
                   {option.label}
                 </span>
               </button>
@@ -168,9 +207,14 @@ export function SkillQuizWizard({
         </div>
       </div>
 
-      {/* Navigation Footer */}
       <div className="flex items-center justify-between border-t border-border pt-4">
-        <Button type="button" variant="outline" size="sm" onClick={handleBack} className="gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleBack}
+          className="gap-1.5"
+        >
           <ArrowLeft className="size-3.5" />
           {currentQuestionIndex === 0 ? "Cancel" : "Previous"}
         </Button>
@@ -184,11 +228,13 @@ export function SkillQuizWizard({
         >
           {currentQuestionIndex === totalQuestions - 1 ? (
             <>
-              See Assessed Level <CheckCircle2 className="size-3.5" />
+              See Assessed Level
+              <CheckCircle2 className="size-3.5" />
             </>
           ) : (
             <>
-              Next Question <ArrowRight className="size-3.5" />
+              Next Question
+              <ArrowRight className="size-3.5" />
             </>
           )}
         </Button>

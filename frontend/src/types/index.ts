@@ -10,9 +10,30 @@ export type GoalType = "Learn" | "Build" | "Compete";
 export type CommitmentLevel = "Casual" | "Serious";
 
 /** Stage 1 (matching) circle state, then Stage 2 (grouping) once full. */
-export type CircleStatus = "Open" | "Full" | "Grouped" | "Expired";
+export type CircleStatus = "Open" | "Grouped" | "Closed";
 
-export type TaskStatus = "In Progress" | "Pending Peer Confirmation" | "Verified";
+export type TaskStatus =
+  | "In Progress"
+  | "Pending Peer Confirmation"
+  | "Verified"
+  | "Changes Requested";
+
+export interface ApiErrorBody {
+  timestamp?: string;
+  status: number;
+  error: string;
+  message: string;
+  path?: string;
+}
+
+/** Payload returned by the existing Spring Boot authentication endpoints. */
+export interface AuthResponse {
+  token: string;
+  userId: number | string;
+  name: string;
+  email: string;
+  role: "LEARNER" | "ADMIN" | string;
+}
 
 export interface User {
   id: string;
@@ -30,7 +51,7 @@ export interface User {
 export interface CircleMember {
   userId: string;
   name: string;
-  skillLevel: SkillLevel;
+  skillLevel: SkillLevel | undefined;
   joinedAt: string; // ISO date
   /** Circle-specific assessment result (0-100). Skill is per circle, not global. */
   scorePercent?: number;
@@ -73,6 +94,8 @@ export interface ProofAttachment {
 
 export type ChatAttachment = ProofAttachment;
 
+export type TaskStatusType = TaskStatus;
+
 export interface Task {
   id: string;
   subGroupId: string;
@@ -111,7 +134,11 @@ export interface Badge {
   earnedAt: string; // ISO date
 }
 
-export type ActivityKind = "task_verified" | "circle_joined" | "badge_earned" | "task_completed";
+export type ActivityKind =
+  | "task_verified"
+  | "circle_joined"
+  | "badge_earned"
+  | "task_completed";
 
 export interface ActivityItem {
   id: string;
@@ -132,7 +159,10 @@ export interface JoinPreferences extends CirclePreferences {
   skillLevel: SkillLevel;
 }
 
-export type MilestoneStatus = "Not Started" | "In Progress" | "Completed";
+export type MilestoneStatus =
+  | "Not Started"
+  | "In Progress"
+  | "Completed";
 
 export interface Milestone {
   id: string;

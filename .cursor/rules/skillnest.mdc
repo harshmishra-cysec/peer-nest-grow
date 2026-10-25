@@ -1,0 +1,32 @@
+---
+description: SkillNest project rules
+alwaysApply: true
+---
+# SkillNest rules
+
+## Repo layout
+- frontend/ : React 19 + TypeScript + TanStack Start + Tailwind (already built, mock services in frontend/src/services)
+- backend/  : Spring Boot (Java 21, Maven), MySQL, Spring Data JPA, Spring Security + JWT (jjwt 0.12.x)
+- docs/     : handoff file, ER diagram, Postman collection
+
+## Backend rules
+- Layers: controller (HTTP only) -> service (all business logic) -> repository. No logic in controllers.
+- Use DTOs (Java records) for requests and responses. Never return entities from controllers.
+- No Lombok. Plain Java with clear names.
+- All fixed numbers live in one constants class: CIRCLE_CAPACITY=9, SUB_GROUP_SIZE=3, QUIZ_ADVANCED_MIN=12, QUIZ_INTERMEDIATE_MIN=6, QUIZ_MAX_SCORE=15, BALANCE_TOLERANCE=2, MAX_RECOMMENDATIONS=5.
+- Authorization is enforced in the service layer, not only in controllers or the UI.
+- Errors: @RestControllerAdvice returning {timestamp, status, error, message, path}.
+- Never hardcode secrets. Read DB credentials and the JWT secret from environment variables or application-local.properties (gitignored).
+- Comments explain WHY, not WHAT. Write code a beginner can read and explain in a viva.
+- Use @Transactional on service methods that change data.
+- After every change, list the files you changed and give the exact command or Postman request to test it.
+- Work on ONE feature per request. Do not refactor unrelated files. Do not touch frontend/ unless I ask.
+
+## Domain rules (final decisions, do not change)
+- A circle holds exactly 9 members. At 9 it becomes GROUPED and sub-groups are created automatically, exactly once.
+- The circle creator is a normal member, not a leader.
+- Quiz: 5 answers, each 0-3, scored by the SERVER. >=12 Advanced, >=6 Intermediate, else Beginner.
+- Skill is stored per (user, circle) together with the numeric assessmentScore. Skill is hidden from other members until the circle is GROUPED.
+- Sub-group leader = highest assessmentScore in that group.
+- Task flow: IN_PROGRESS -> assignee marks done -> PENDING_PEER_CONFIRMATION -> another member (never the assignee) confirms -> VERIFIED, or requests changes with a note -> CHANGES_REQUESTED.
+- Only members of a sub-group can read or write its tasks, messages, milestones and resources.

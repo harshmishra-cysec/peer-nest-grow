@@ -1,160 +1,266 @@
-import { simulateRequest } from "./apiClient";
-import {
-  computeBalancedSubGroups,
-  getCircleCapacity,
-  type GroupingResult,
-} from "./groupingService";
-import { CIRCLES, CURRENT_USER, SUB_GROUPS, TASKS } from "./mockData";
-import type { SubGroup, Task } from "@/types";
+import { ApiError, apiGet, apiPost } from "./apiClient";
+import { getCircles, getCircleById, getCircleCapacity } from "./circleService";
+import type { CircleMember, SkillLevel, SubGroup, Task, TaskStatus } from "@/types";
+
+interface ApiGroupMember {
+  userId: number | string;
+  name: string;
+  skillLevel: string;
+  assessmentScore: number;
+  joinedAt: string;
+}
+
+interface ApiSubGroup {
+  id: number | string;
+  circleId: number | string;
+  name: string;
+  balanceLabel: string;
+  leaderUserId: number | string;
+  createdAt: string;
+  members: ApiGroupMember[];
+}
+
+interface ApiTask {
+  id: number | string;
+  subGroupId: number | string;
+  title: string;
+  description: string | null;
+  assigneeUserId: number | string;
+  assigneeName: string;
+  dueDate: string | null;
+  status: string;
+  proofUrl: string | null;
+  reviewNote: string | null;
+  createdAt: string;
+}
+
+const statusToUi: Record<string, TaskStatus> = {
+  IN_PROGRESS: "In Progress",
+  PENDING_PEER_CONFIRMATION: "Pending Peer Confirmation",
+  VERIFIED: "Verified",
+  CHANGES_REQUESTED: "Changes Requested",
+};
+
+function mapGroupMember(member: ApiGroupMember): CircleMember {
+  return {
+    userId: String(member.userId),
+    name: member.name,
+    skillLevel: (
+      member.skillLevel[0] +
+      member.skillLevel.slice(1).toLowerCase()
+    ) as SkillLevel,
+    scorePercent: (member.assessmentScore / 15) * 100,
+    joinedAt: member.joinedAt,
+  };
+}
+
+function mapSubGroup(group: ApiSubGroup): SubGroup {
+  return {
+    id: String(group.id),
+    circleId: String(group.circleId),
+    name: group.name,
+    leaderUserId: String(group.leaderUserId),
+    members: group.members.map(mapGroupMember),
+    status: "Active",
+  };
+}
+
+function mapTask(task: ApiTask, previous?: Task): Task {
+  return {
+    id: String(task.id),
+    subGroupId: String(task.subGroupId),
+    title: task.title,
+    description: task.description ?? "",
+    assigneeUserId: String(task.assigneeUserId),
+    dueDate: task.dueDate ?? "",
+    status: statusToUi[task.status] ?? "In Progress",
+    ...(task.proofUrl ? { proofUrl: task.proofUrl } : {}),
+    ...(task.reviewNote ? { comment: task.reviewNote } : {}),
+    verifiedByUserIds: previous?.verifiedByUserIds ?? [],
+  };
+}
 
 /**
- * Forms the sub-groups for a FULL circle — exactly once.
- * Called inside the same step that accepts the last member (see joinCircle), so two
- * simultaneous "last" joins can never form groups twice. The backend must do the same
- * inside one DB transaction (unique constraint on circle_id + group formation).
- * If validation fails, computeBalancedSubGroups throws and NOTHING is saved.
+ * Group formation is performed by the backend when the final circle member joins.
+ * Kept for compatibility with existing frontend imports.
  */
-export function formCircleOnce(circleId: string): SubGroup[] {
-  const existing = SUB_GROUPS.filter((group) => group.circleId === circleId);
-  if (existing.length > 0) return existing;
-
-  const circle = CIRCLES.find((c) => c.id === circleId);
-  if (!circle || circle.members.length < getCircleCapacity(circle)) return [];
-
-  const result = computeBalancedSubGroups(circle.id, circle.members);
-  SUB_GROUPS.push(...result.subGroups);
-  circle.status = "Grouped";
-  return result.subGroups;
-}
-
-/** Returns the grouping result with tier statistics, score spread and balance label. */
-export function getGroupingAnalysisForCircle(circleId: string): Promise<GroupingResult | null> {
-  const circle = CIRCLES.find((c) => c.id === circleId);
-  if (!circle || circle.members.length < getCircleCapacity(circle)) {
-    return simulateRequest(null);
-  }
-  return simulateRequest(computeBalancedSubGroups(circle.id, circle.members));
-}
-
-export function getSubGroupsForCircle(circleId: string): Promise<SubGroup[]> {
-  return simulateRequest(formCircleOnce(circleId));
-}
-
-export function getSubGroupById(subGroupId: string): Promise<SubGroup | undefined> {
-  return simulateRequest(SUB_GROUPS.find((group) => group.id === subGroupId));
-}
-
-/** The sub-group the current user was placed in for a circle, if grouping ran. */
-export function getMySubGroupForCircle(circleId: string): Promise<SubGroup | undefined> {
-  const groups = formCircleOnce(circleId);
-  return simulateRequest(
-    groups.find((group) => group.members.some((m) => m.userId === CURRENT_USER.id)),
+export function formCircleOnce(_circleId: string): SubGroup[] {
+  throw new ApiError(
+    501,
+    "Not Implemented",
+    "Group formation is performed by the backend when the last circle member joins.",
   );
 }
 
-export function getTasks(subGroupId: string): Promise<Task[]> {
-  return simulateRequest(TASKS.filter((task) => task.subGroupId === subGroupId));
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Authorization — enforced here in the service layer, not only by hiding     */
-/*  buttons in the UI. The Spring Boot API must repeat these checks.           */
-/* -------------------------------------------------------------------------- */
-
-function requireGroupMember(subGroupId: string): SubGroup {
-  const group = SUB_GROUPS.find((g) => g.id === subGroupId);
-  if (!group) throw new Error("Sub-group not found.");
-  if (!group.members.some((m) => m.userId === CURRENT_USER.id)) {
-    throw new Error("Only members of this sub-group can do this.");
-  }
-  return group;
-}
-
-/** The stored task is the source of truth, never the copy the UI holds. */
-const storedTask = (task: Task): Task => TASKS.find((t) => t.id === task.id) ?? task;
-
-function saveTask(updated: Task): Task {
-  const idx = TASKS.findIndex((t) => t.id === updated.id);
-  if (idx !== -1) TASKS[idx] = updated;
-  else TASKS.push(updated);
-  return updated;
-}
-
-export type NewTaskInput = Pick<Task, "title" | "description" | "assigneeUserId" | "dueDate">;
-
 /**
- * Any member can add a task, but only the group LEADER can assign it to someone else;
- * everyone else can only assign tasks to themselves.
+ * Returns null until the circle reaches its selected capacity.
+ *
+ * Once full, the persisted backend subgroups are the source of truth.
+ * The frontend does not recompute or replace the backend grouping.
  */
-export async function createTask(subGroupId: string, input: NewTaskInput): Promise<Task> {
-  const group = requireGroupMember(subGroupId);
-  if (!group.members.some((m) => m.userId === input.assigneeUserId)) {
-    throw new Error("The assignee must be a member of this sub-group.");
+export async function getGroupingAnalysisForCircle(
+  circleId: string,
+): Promise<SubGroup[] | null> {
+  const circle = await getCircleById(circleId);
+
+  if (!circle || circle.members.length < getCircleCapacity(circle)) {
+    return null;
   }
-  const isLeader = group.leaderUserId === CURRENT_USER.id;
-  if (!isLeader && input.assigneeUserId !== CURRENT_USER.id) {
-    throw new Error("Only the group leader can assign tasks to other members.");
-  }
-  const newTask: Task = {
-    id: `t-${Date.now()}`,
-    subGroupId,
-    ...input,
-    status: "In Progress",
-    verifiedByUserIds: [],
-  };
-  TASKS.push(newTask);
-  return simulateRequest(newTask);
+
+  return getSubGroupsForCircle(circleId);
 }
 
-/** Self-report step: ONLY the assignee can mark their own task as done. */
+export async function getSubGroupsForCircle(
+  circleId: string,
+): Promise<SubGroup[]> {
+  try {
+    const groups = await apiGet<ApiSubGroup[]>(
+      `/api/circles/${encodeURIComponent(circleId)}/subgroups`,
+    );
+
+    return groups.map(mapSubGroup);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+export async function getSubGroupById(
+  subGroupId: string,
+): Promise<SubGroup | undefined> {
+  for (const circle of await getCircles()) {
+    try {
+      const match = (await getSubGroupsForCircle(circle.id)).find(
+        (group) => group.id === subGroupId,
+      );
+
+      if (match) {
+        return match;
+      }
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export async function getMySubGroup(circleId: string): Promise<SubGroup> {
+  return mapSubGroup(
+    await apiGet<ApiSubGroup>(
+      `/api/circles/${encodeURIComponent(circleId)}/my-subgroup`,
+    ),
+  );
+}
+
+export async function getMySubGroupForCircle(
+  circleId: string,
+): Promise<SubGroup | undefined> {
+  try {
+    return await getMySubGroup(circleId);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
+export async function getTasks(subGroupId: string): Promise<Task[]> {
+  const tasks = await apiGet<ApiTask[]>(
+    `/api/subgroups/${encodeURIComponent(subGroupId)}/tasks`,
+  );
+
+  return tasks.map((task) => mapTask(task));
+}
+
+export type NewTaskInput = Pick<
+  Task,
+  "title" | "description" | "assigneeUserId" | "dueDate"
+>;
+
+export async function createTask(
+  subGroupId: string,
+  input: NewTaskInput,
+): Promise<Task> {
+  const created = await apiPost<ApiTask>(
+    `/api/subgroups/${encodeURIComponent(subGroupId)}/tasks`,
+    {
+      title: input.title,
+      description: input.description,
+      assigneeUserId: Number(input.assigneeUserId),
+      dueDate: input.dueDate || null,
+    },
+  );
+
+  return mapTask(created);
+}
+
 export async function markTaskDone(
   task: Task,
   proofUrl?: string,
   proofAttachments?: Task["proofAttachments"],
 ): Promise<Task> {
-  const current = storedTask(task);
-  requireGroupMember(current.subGroupId);
-  if (current.assigneeUserId !== CURRENT_USER.id) {
-    throw new Error("Only the assignee can mark this task as done.");
+  if (proofAttachments?.length) {
+    throw new ApiError(
+      501,
+      "Not Implemented",
+      "The current backend accepts a proof URL but does not support file attachments.",
+    );
   }
-  if (current.status === "Verified") throw new Error("This task is already verified.");
 
-  const updated: Task = {
-    ...current,
-    status: "Pending Peer Confirmation",
-    ...(proofUrl !== undefined ? { proofUrl: proofUrl.trim() || undefined } : {}),
-    ...(proofAttachments !== undefined ? { proofAttachments } : {}),
-  };
-  return simulateRequest(saveTask(updated));
+  const body = proofUrl?.trim()
+    ? { proofUrl: proofUrl.trim() }
+    : {};
+
+  return mapTask(
+    await apiPost<ApiTask>(
+      `/api/tasks/${encodeURIComponent(task.id)}/mark-done`,
+      body,
+    ),
+    task,
+  );
+}
+
+export async function confirmTask(
+  task: Task,
+  _comment?: string,
+): Promise<Task> {
+  return mapTask(
+    await apiPost<ApiTask>(
+      `/api/tasks/${encodeURIComponent(task.id)}/confirm`,
+    ),
+    task,
+  );
+}
+
+export async function requestTaskChanges(
+  taskId: string,
+  note: string,
+): Promise<Task> {
+  return mapTask(
+    await apiPost<ApiTask>(
+      `/api/tasks/${encodeURIComponent(taskId)}/request-changes`,
+      {
+        reviewNote: note,
+      },
+    ),
+  );
 }
 
 /**
- * Peer confirmation: a member of the group, who is NOT the assignee, can verify a task
- * that is waiting for confirmation.
+ * The existing workspace's peer-note action maps to the backend
+ * request-changes transition.
  */
-export async function confirmTask(task: Task, comment?: string): Promise<Task> {
-  const current = storedTask(task);
-  requireGroupMember(current.subGroupId);
-  if (current.assigneeUserId === CURRENT_USER.id) {
-    throw new Error("You can't confirm your own task.");
-  }
-  if (current.status !== "Pending Peer Confirmation") {
-    throw new Error("This task is not waiting for peer confirmation.");
-  }
-  const updated: Task = {
-    ...current,
-    status: "Verified",
-    comment: comment !== undefined && comment.trim() ? comment.trim() : current.comment,
-    verifiedByUserIds: current.verifiedByUserIds.includes(CURRENT_USER.id)
-      ? current.verifiedByUserIds
-      : [...current.verifiedByUserIds, CURRENT_USER.id],
-  };
-  return simulateRequest(saveTask(updated));
-}
-
-/** Peer feedback without confirming. Any member of the group can leave a note. */
-export async function commentOnTask(task: Task, comment: string): Promise<Task> {
-  const current = storedTask(task);
-  requireGroupMember(current.subGroupId);
-  return simulateRequest(saveTask({ ...current, comment: comment.trim() || undefined }));
+export async function commentOnTask(
+  task: Task,
+  comment: string,
+): Promise<Task> {
+  return requestTaskChanges(task.id, comment);
 }

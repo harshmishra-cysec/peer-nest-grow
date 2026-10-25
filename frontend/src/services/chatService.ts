@@ -1,32 +1,55 @@
-import { simulateRequest } from "./apiClient";
-import { CURRENT_USER, MESSAGES } from "./mockData";
+import { ApiError, apiGet, apiPost } from "./apiClient";
 import type { ChatAttachment, Message } from "@/types";
 
-/**
- * Chat is isolated from the rest of the sub-group service because it will
- * move to a WebSocket/STOMP connection when the Spring Boot backend lands.
- * Components only ever call these functions.
- */
-
-export function fetchMessages(subGroupId: string): Promise<Message[]> {
-  return simulateRequest(MESSAGES.filter((message) => message.subGroupId === subGroupId));
+interface ApiMessage {
+  id: number | string;
+  subGroupId: number | string;
+  senderUserId: number | string;
+  senderName: string;
+  body: string;
+  sentAt: string;
 }
 
-/** Returns the message as the server would echo it back (with id + timestamp + optional attachments). */
-export function sendMessage(
+function mapMessage(message: ApiMessage): Message {
+  return {
+    id: String(message.id),
+    subGroupId: String(message.subGroupId),
+    senderUserId: String(message.senderUserId),
+    senderName: message.senderName,
+    body: message.body,
+    sentAt: message.sentAt,
+  };
+}
+
+export async function getMessages(subGroupId: string, since?: string | Date): Promise<Message[]> {
+  const query = new URLSearchParams();
+  if (since) query.set("since", since instanceof Date ? since.toISOString() : since);
+  const suffix = query.size ? `?${query.toString()}` : "";
+  const messages = await apiGet<ApiMessage[]>(
+    `/api/subgroups/${encodeURIComponent(subGroupId)}/messages${suffix}`,
+  );
+  return messages.map(mapMessage);
+}
+
+export function fetchMessages(subGroupId: string): Promise<Message[]> {
+  return getMessages(subGroupId);
+}
+
+export async function sendMessage(
   subGroupId: string,
   body: string,
   attachments?: ChatAttachment[],
 ): Promise<Message> {
-  const message: Message = {
-    id: `m-${Date.now()}`,
-    subGroupId,
-    senderUserId: CURRENT_USER.id,
-    senderName: CURRENT_USER.name,
-    body,
-    sentAt: new Date().toISOString(),
-    ...(attachments && attachments.length > 0 ? { attachments } : {}),
-  };
-  MESSAGES.push(message);
-  return simulateRequest(message);
+  if (attachments?.length) {
+    throw new ApiError(
+      501,
+      "Not Implemented",
+      "The current backend supports text messages but not chat attachments.",
+    );
+  }
+  const message = await apiPost<ApiMessage>(
+    `/api/subgroups/${encodeURIComponent(subGroupId)}/messages`,
+    { body },
+  );
+  return mapMessage(message);
 }

@@ -94,7 +94,8 @@ export function TaskList({
         {tasks.map((task) => {
           const isOwner = task.assigneeUserId === currentUserId;
           // Self-report: only the assignee can mark "I'm done".
-          const canMarkDone = task.status === "In Progress" && isOwner;
+          const canMarkDone =
+            (task.status === "In Progress" || task.status === "Changes Requested") && isOwner;
           // Peer confirmation: a peer other than the assignee must verify the work.
           const canConfirm = task.status === "Pending Peer Confirmation" && !isOwner;
           const isPendingOwner = task.status === "Pending Peer Confirmation" && isOwner;

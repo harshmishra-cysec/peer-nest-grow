@@ -1,3 +1,4 @@
+
 import { CIRCLE_CAPACITY, SUB_GROUP_SIZE } from "@/constants";
 import type { Circle, CircleMember, SkillLevel, SubGroup } from "@/types";
 

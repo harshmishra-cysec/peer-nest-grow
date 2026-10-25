@@ -10,6 +10,7 @@ const STATUS_STYLES: Record<TaskStatus, { className: string; Icon: typeof Circle
     Icon: Clock,
   },
   "In Progress": { className: "bg-muted text-muted-foreground", Icon: Circle },
+  "Changes Requested": { className: "bg-warning-soft text-warning-foreground", Icon: Clock },
 };
 
 export function TaskStatusBadge({ status }: { status: TaskStatus }) {

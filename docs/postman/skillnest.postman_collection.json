@@ -1,0 +1,242 @@
+{
+  "info": {
+    "_postman_id": "9cdd8452-12a8-4ef3-b057-a41e7b9f7e06",
+    "name": "SkillNest API — localhost demo",
+    "description": "End-to-end SkillNest evaluation flow. Start the backend, then run requests in folder order. Demo credentials are in ../DEMO_CREDENTIALS.md. Circle A is intentionally seeded with 8 of 9 members; join it with learner09 to trigger the existing grouping flow. The Circle C folder uses learner07 as Alpha leader and learner08 as its peer reviewer.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "loginEmail", "value": "learner09@skillnest.com", "type": "string" },
+    { "key": "loginPassword", "value": "LearnSkill123", "type": "string" },
+    { "key": "newLearnerEmail", "value": "new.learner@example.com", "type": "string" },
+    { "key": "newLearnerPassword", "value": "NewLearner123", "type": "string" },
+    { "key": "peerEmail", "value": "learner08@skillnest.com", "type": "string" },
+    { "key": "peerPassword", "value": "LearnSkill123", "type": "string" },
+    { "key": "workspaceLeaderEmail", "value": "learner07@skillnest.com", "type": "string" },
+    { "key": "workspaceLeaderPassword", "value": "LearnSkill123", "type": "string" },
+    { "key": "circleAId", "value": "", "type": "string" },
+    { "key": "circleCId", "value": "", "type": "string" },
+    { "key": "newCircleId", "value": "", "type": "string" },
+    { "key": "circleDeadline", "value": "2026-12-31", "type": "string" },
+    { "key": "subgroupId", "value": "", "type": "string" },
+    { "key": "alphaSubgroupId", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "peerUserId", "value": "", "type": "string" },
+    { "key": "taskId", "value": "", "type": "string" },
+    { "key": "changeTaskId", "value": "", "type": "string" },
+    { "key": "milestoneId", "value": "", "type": "string" },
+    { "key": "milestoneStatus", "value": "IN_PROGRESS", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Register a new learner (optional)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"New Demo Learner\",\n  \"email\": \"{{newLearnerEmail}}\",\n  \"password\": \"{{newLearnerPassword}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Public registration example. The default email is reusable only once; change newLearnerEmail before registering again."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Login — Circle A demo learner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"password\": \"{{loginPassword}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('login succeeded', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Get current user",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users/me" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('userId', String(pm.response.json().userId));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "2. Circle A live grouping demo — run in order",
+      "description": "The seeded learner09 account is not already in Circle A. Circle A starts at exactly 8/9. Joining below triggers the normal quiz validation and the locked P4 grouping transaction.",
+      "item": [
+        {
+          "name": "List circles — capture Circle A and C IDs",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/circles" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const circles = pm.response.json();", "const a = circles.find(c => c.name === 'DSA Sprint - Graph Mastery');", "const c = circles.find(c => c.name === 'System Design Cohort');", "if (a) pm.collectionVariables.set('circleAId', String(a.id));", "if (c) pm.collectionVariables.set('circleCId', String(c.id));", "pm.test('Circle A is seeded at 8/9 before joining', () => pm.expect(a && a.memberCount).to.eql(8));"] } }]
+        },
+        {
+          "name": "Get recommended circles",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/circles/recommended?topic=Data%20Structures%20%26%20Algorithms&goalType=LEARN&commitment=SERIOUS" }
+        },
+        {
+          "name": "Create a circle — API example",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman API Demo Circle\",\n  \"description\": \"A sample circle created from the Postman collection.\",\n  \"topic\": \"Data Structures & Algorithms\",\n  \"goalType\": \"LEARN\",\n  \"commitment\": \"SERIOUS\",\n  \"deadline\": \"{{circleDeadline}}\",\n  \"capacity\": 9,\n  \"answers\": [2, 2, 2, 2, 2]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/circles",
+            "description": "Creates an additional circle; the seeded Circle A remains untouched. The pre-request script sets circleDeadline to a date 90 days in the future."
+          },
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);", "pm.collectionVariables.set('circleDeadline', future.toISOString().slice(0, 10));"] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 201) pm.collectionVariables.set('newCircleId', String(pm.response.json().id));"] } }
+          ]
+        },
+        {
+          "name": "Get Circle A details (verify 8 members)",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/circles/{{circleAId}}" }
+        },
+        {
+          "name": "Join Circle A — fifth answer submits quiz and triggers grouping",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"answers\": [1, 1, 1, 1, 1]\n}", "options": { "raw": { "language": "json" } } },
+            "url": "{{baseUrl}}/api/circles/{{circleAId}}/join",
+            "description": "This is the actual join endpoint; quiz answers are each 0–3. After success the circle should be GROUPED at 9/9."
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('circle is grouped after final join', () => pm.expect(pm.response.json().status).to.eql('GROUPED'));"] } }]
+        },
+        {
+          "name": "List generated Circle A subgroups",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/circles/{{circleAId}}/subgroups" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const groups = pm.response.json();", "if (groups && groups.length) pm.collectionVariables.set('subgroupId', String(groups[0].id));", "pm.test('three groups were formed', () => pm.expect(groups).to.have.length(3));"] } }]
+        },
+        {
+          "name": "Get my generated subgroup",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/circles/{{circleAId}}/my-subgroup" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const group = pm.response.json();", "pm.collectionVariables.set('subgroupId', String(group.id));"] } }]
+        },
+        {
+          "name": "Get tasks in my Circle A subgroup",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{subgroupId}}/tasks" }
+        },
+        {
+          "name": "Get messages in my Circle A subgroup",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{subgroupId}}/messages" }
+        }
+      ]
+    },
+    {
+      "name": "3. Circle C workspace peer-review demo — run in order",
+      "description": "Circle C Alpha is seeded with learner07 (leader), learner08 (peer), and learner09. Logins store token automatically. The task lifecycle exercises IN_PROGRESS → PENDING_PEER_CONFIRMATION → VERIFIED and CHANGES_REQUESTED.",
+      "item": [
+        {
+          "name": "Login — Circle C peer learner08",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{peerEmail}}\",\n  \"password\": \"{{peerPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Get peer user ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users/me" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('peerUserId', String(pm.response.json().userId));"] } }]
+        },
+        {
+          "name": "Login — Circle C Alpha leader learner07",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{workspaceLeaderEmail}}\",\n  \"password\": \"{{workspaceLeaderPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Get leader user ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/users/me" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('userId', String(pm.response.json().userId));"] } }]
+        },
+        {
+          "name": "List Circle C groups — capture Alpha subgroup ID",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/circles/{{circleCId}}/subgroups" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["const groups = pm.response.json();", "const alpha = groups.find(g => g.name === 'Sub-Group Alpha');", "if (alpha) pm.collectionVariables.set('alphaSubgroupId', String(alpha.id));", "pm.test('Circle C has three groups', () => pm.expect(groups).to.have.length(3));"] } }]
+        },
+        {
+          "name": "Get Alpha tasks",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/tasks" }
+        },
+        {
+          "name": "Create task assigned to learner08 (leader only)",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Review the capacity plan\",\n  \"description\": \"Check assumptions and note risks.\",\n  \"assigneeUserId\": {{peerUserId}},\n  \"dueDate\": \"2026-12-01\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/tasks" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('taskId', String(pm.response.json().id));"] } }]
+        },
+        {
+          "name": "Login as assignee learner08",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{peerEmail}}\",\n  \"password\": \"{{peerPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Mark task done as assignee",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"proofUrl\": \"https://example.com/evidence\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/tasks/{{taskId}}/mark-done" }
+        },
+        {
+          "name": "Login as peer reviewer learner07",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{workspaceLeaderEmail}}\",\n  \"password\": \"{{workspaceLeaderPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Confirm task as a different subgroup member",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/tasks/{{taskId}}/confirm" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('peer verified task', () => pm.expect(pm.response.json().status).to.eql('VERIFIED'));"] } }]
+        },
+        {
+          "name": "Create a second task for changes-request flow",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Draft the cache invalidation notes\",\n  \"description\": \"Prepare a short proposal for peer review.\",\n  \"assigneeUserId\": {{peerUserId}},\n  \"dueDate\": \"2026-12-03\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/tasks" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('changeTaskId', String(pm.response.json().id));"] } }]
+        },
+        {
+          "name": "Login as assignee learner08 for changes task",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{peerEmail}}\",\n  \"password\": \"{{peerPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Mark second task done",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"proofUrl\": \"https://example.com/cache-notes\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/tasks/{{changeTaskId}}/mark-done" }
+        },
+        {
+          "name": "Login as peer reviewer learner07 for changes request",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{workspaceLeaderEmail}}\",\n  \"password\": \"{{workspaceLeaderPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('token', pm.response.json().token);"] } }]
+        },
+        {
+          "name": "Request changes as peer",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"reviewNote\": \"Please add a concrete eviction example before approval.\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/tasks/{{changeTaskId}}/request-changes" }
+        },
+        {
+          "name": "Get Alpha messages",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/messages" }
+        },
+        {
+          "name": "Poll Alpha messages since timestamp",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/messages?since=2026-01-01T00%3A00%3A00Z" }
+        },
+        {
+          "name": "Send Alpha message",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"body\": \"The capacity notes are ready for the next review.\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/messages" }
+        },
+        {
+          "name": "List Alpha milestones",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/milestones" }
+        },
+        {
+          "name": "Create Alpha milestone",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Publish the first architecture draft\",\n  \"description\": \"Agree on the main components and boundaries.\",\n  \"dueDate\": \"2026-12-10\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/milestones" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('milestoneId', String(pm.response.json().id));"] } }]
+        },
+        {
+          "name": "Update Alpha milestone status",
+          "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"status\": \"{{milestoneStatus}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/milestones/{{milestoneId}}/status" }
+        },
+        {
+          "name": "List Alpha resources",
+          "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/resources" }
+        },
+        {
+          "name": "Add Alpha resource",
+          "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Spring Boot reference\",\n  \"url\": \"https://docs.spring.io/spring-boot/index.html\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/subgroups/{{alphaSubgroupId}}/resources" }
+        }
+      ]
+    }
+  ]
+}
